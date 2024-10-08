@@ -25,9 +25,16 @@ library(devtools)
 #install.packages("rrtools")
 library(rrtools)
 
+#You need the "remotes" package to install the "rrtools:BenMarwick" package 
+
+#install.packages("remotes")
+library(remotes)
+
+remotes::install_github("benmarwick/rrtools")
+
 #NOTE: I did install ALL updates
 
-devtools::install_github("benmarwick/rrtools")
+#devtools::install_github("benmarwick/rrtools")
 ---------------------------------------------------------------------------------------
   
 #Create a new .Rproj -> very important not to have spaces, underscores or numbers in the folder name
