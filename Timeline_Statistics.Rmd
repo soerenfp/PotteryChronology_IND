@@ -1,0 +1,67 @@
+---
+title: "INDPotteryChronology_Statistics"
+author: "Soren Pedersen"
+date: "20/09/2024"
+output: html_document
+---
+
+###THIS IS THE MARKDOWN DOCUMENT OF THE STATISTICS OF THE IND POTTERY CHRONOLOGY
+  #PhD thesis of Soren Feldborg
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Setup folder sturcture
+
+```{r, echo=TRUe}
+
+#install devtools
+
+#install.packages("devtools")
+library(devtools)
+
+#install.packages("rrtools")
+library(rrtools)
+
+#NOTE: I did install ALL updates
+
+devtools::install_github("benmarwick/rrtools")
+---------------------------------------------------------------------------------------
+  
+#Create a new .Rproj -> very important not to have spaces, underscores or numbers in the folder name
+  
+#OBS: do not make a new .Rproj if you already have a project running -> skip to next step
+
+#rrtools::use_compendium("C:/Users/Pedersen/Documents/R/PotteryChronologyIND")
+
+#rrtools::use_compendium("C:/Users/Pedersen/Documents/R/RSeminar")
+
+
+#Example: rrtools::use_compendium("C:/your/path/name/here/YourNewRProjectNameHere")
+
+```
+
+#Set up folder structure
+
+This is to create folder "analysis" with sub-folder structure -> VERY USEFUL
+
+The structure is made by Ben Marwick and is designated for archaeological writing and structure
+
+```{r, echo=TRUE}
+#Package that includes folder structure
+library(rrtools)
+
+#create folder -> creates the analysis folder and the structure
+use_analysis()
+
+#Do this below (pops-up when you execute use_analysis())
+
+#Next, you need to:  ↓ ↓ ↓ ↓ 
+#* Write your article/report/thesis, start at the paper.Rmd file
+#* Add the citation style library file (csl) to replace the default provided here, see https://github.com/citation-style-language/
+#* Add bibliographic details of cited items to the 'references.bib' file
+#* For adding captions & cross-referencing in an Rmd, see https://bookdown.org/yihui/bookdown/
+#* For adding citations & reference lists in an Rmd, see http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html
+```
