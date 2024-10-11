@@ -72,3 +72,225 @@ use_analysis()
 #* For adding captions & cross-referencing in an Rmd, see https://bookdown.org/yihui/bookdown/
 #* For adding citations & reference lists in an Rmd, see http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html
 ```
+
+#Import data spreadsheet and make a data set
+
+```{r, echo=TRUE}
+##See and set working directory (Optional - Files are in the raw_data folder)##
+#getwd()
+#setwd()
+
+##Read data and create a data set##
+
+#install.packages("readxl")
+library(readxl)
+TimelineDataTrial <- read_excel("analysis/data/raw_data/15_TRIAL_TimelineData.xlsx")
+
+##See data (check if columns and rows are properly named)
+#str(TimelineDataTrial)
+```
+
+#Make cluster analysis of the main "Actural width" category dependent on "Type category -> 1st TRIAL"
+
+```{r, echo=TRUE}
+##1st TRIAL##
+
+#Split Data by Types: Use dplyr to split the data into individual data frames for each type and perform clustering on each one.
+
+#install.packages("dplyr")
+library(dplyr)
+
+##create a data set by type##
+
+#Filter Relevant Columns: Create a new data set. Select only the "Type category" and "Actual width" measurement columns, removing any other columns that aren’t needed for clustering.
+
+Trialdata_filtered <- TimelineDataTrial %>% select("Type category", "Actual width")
+
+#Split Data by Type: Split the dataset into individual data frames for each type.
+
+Trialdata_by_type <- Trialdata_filtered %>%
+  group_by("Type category") %>%
+  group_split()
+
+#Cluster "Actual width" Measurements Within Each "Type category": Apply k-means clustering or another clustering algorithm to the "Actual width" measurements within each "Type cateogry". Here’s how with k-means:
+
+#install.packages("factoextra")
+library(factoextra)
+
+# Define a function to perform clustering
+TrialCluster_AWidth <- function(Trialdata_filtered) {
+  AWidth_data <- scale(Trialdata_filtered$`Actual width`)  # Scale y measurements
+  kmeans_result <- kmeans(AWidth_data, centers = 3, nstart = 25)  # Adjust 'centers' as needed
+  return(kmeans_result)
+}
+
+# Apply clustering for each type
+TrialClusters_AWidth <- lapply(Trialdata_by_type, TrialCluster_AWidth)
+
+##1. Extract Cluster Assignments and Combine Data
+
+#First, we’ll create a loop that applies clustering to "Actual width" for each "Type category" and stores the results in a data frame.
+
+# Loop to perform clustering for each type
+TrialClusterResults <- lapply(1:length(Trialdata_filtered), TrialClusters_AWidth(i)) {
+  type_data <- Trialdata_by_type[[i]]
+  type_name <- unique(type_data$`Type category`)
+}
+```
+#Make cluster analysis of the main "Actural width" category dependent on "Type category -> 2nd TRIAL"
+
+To analyze clusters of Actual width within each numeric category of the Type category (ignoring the letter part, such as 1a, 1b, 1c grouped as 1), we can split the data by the numeric portion of the Type category and then perform clustering on Actual width measurements within each group. Here’s how to do it:
+
+0) Run code for creating the "TimelineDataTrial" dataset (Above)
+
+Step 1) Extract the Numeric Portion of Type Category: Use regular expressions to isolate the numeric part of each Type category value.
+
+Step 2) Group Data by the Numeric Part of Type Category: This allows clustering on Actual width measurements within each numeric category.
+
+Step 3) Perform Clustering on Each Group: Apply k-means or another clustering method on each numeric group separately.
+
+###STEP 1###
+```{r, echo=TRUE}
+##Step 1: Load Data and Extract Numeric Category
+
+#Assuming you have loaded your data from Excel:
+
+library(dplyr)
+library(readxl)
+
+# Load data EXAMPLE
+#data <- read_excel("data/raw/yourfile.xlsx")
+
+# Extract numeric part of Type category (e.g., "1a" becomes "1")
+TypeData <- TimelineDataTrial %>%
+  mutate(numeric_category = as.numeric(gsub("[^0-9]", "", `Type category`)))
+```
+
+###STEP 2###
+```{r, echo=TRUE}
+##Step 2: Group by Numeric Category and Apply Clustering
+
+#Now, we can group by numeric_category and perform clustering on Actual width within each group.
+
+# Split data by numeric category
+data_by_numeric <- TypeData %>%
+  group_by(numeric_category) %>%
+  group_split()
+
+# Define a function to perform clustering on each group (OBS: Change "TypeData" to your created dataset)
+
+# Define a function to perform clustering on Actual width within each numeric category
+cluster_actual_width <- function(TypeData) {
+  # Remove NAs in Actual width
+  TypeData <- TypeData %>% filter(!is.na("Actual width"))
+  
+  # Check if there are any remaining rows
+  if (nrow(TypeData) > 0) {
+    # Ensure ActualWidth is numeric
+    TypeData$ActualWidth <- as.numeric(TypeData$`Actual width`)
+
+    # Scale Actual width for clustering
+    TypeData$scaled_width <- scale(TypeData$`Actual width`)  
+    
+    # Remove any rows that may result in NA after scaling
+    TypeData <- TypeData %>% filter(!is.na(scaled_width) & is.finite(scaled_width))
+
+    # Count unique scaled values
+    num_unique <- nrow(unique(TypeData[, c("scaled_width")]))  # Count unique scaled width values
+
+    # Determine the number of clusters (1 to 3 based on unique values)
+    num_clusters <- min(3, num_unique)  # Set to 3 or the number of unique points, whichever is smaller
+    
+    # Perform clustering only if there are enough unique points
+    if (num_clusters > 0) {
+      kmeans_result <- kmeans(TypeData$scaled_width, centers = num_clusters, nstart = 25)  # Perform clustering
+      TypeData$cluster <- kmeans_result$cluster  # Assign clusters
+    } else {
+      TypeData$cluster <- NA  # Assign NA if not enough points to cluster
+    }
+  } else {
+    TypeData$cluster <- NA  # Assign NA if df is empty
+  }
+  
+  return(TypeData)
+}
+
+# Apply the clustering function to each group 
+#ERROR: Error: number of cluster centres must lie between 1 and nrow(x)
+clustered_data <- lapply(data_by_numeric, cluster_actual_width)
+
+# Combine the clustered data back into one data frame
+combined_clustered_data <- bind_rows(clustered_data)
+
+```
+
+```{r, echo=TRUE}
+#TRIAL#
+cluster_actual_width <- function(TypeData) {
+  # Remove NAs in Actual width
+  TypeData <- TypeData %>% filter(!is.na(`Actual width`))
+  
+  # Check if there are any remaining rows
+  if (nrow(TypeData) > 0) {
+    # Ensure Actual width is numeric
+    TypeData$`Actual width` <- as.numeric(df$`Actual width`)
+
+    # Scale Actual width for clustering
+    TypeData$scaled_width <- scale(TypeData$`Actual width`)  
+    
+    # Remove any rows that may result in NA after scaling
+    TypeData <- TypeData %>% filter(!is.na(scaled_width) & is.finite(scaled_width))
+
+    # Count unique scaled values
+    num_unique <- nrow(unique(TypeData[, c("scaled_width")]))  # Count unique scaled width values
+
+    # Determine the number of clusters (1 to 3 based on unique values)
+    num_clusters <- min(3, num_unique)
+    
+    # Perform clustering only if there are enough unique points
+    if (num_clusters >= 1) {
+      kmeans_result <- kmeans(TypeData$scaled_width, centers = num_clusters, nstart = 25)  # Perform clustering
+      TypeData$cluster <- kmeans_result$cluster  # Assign clusters
+    } else {
+      TypeData$cluster <- NA  # Assign NA if not enough points to cluster
+    }
+  } else {
+    TypeData$cluster <- NA  # Assign NA if df is empty
+  }
+  
+  return(TypeData)
+}
+
+
+# Apply the clustering function to each group
+clustered_data <- lapply(data_by_numeric, cluster_actual_width)
+
+# Combine the clustered data back into one data frame
+combined_clustered_data <- bind_rows(clustered_data)
+
+```
+
+#Step 3: Visualize Clusters for Each Numeric Category
+Use ggplot2 to plot clusters for each numeric category, either as a density plot or box plot:
+```{r, echo=TRUE}
+#Step 3
+
+#Density Plot
+library(ggplot2)
+
+ggplot(combined_clustered_data, aes(x = `Actual width`, fill = as.factor(cluster))) +
+  geom_density(alpha = 0.6) +
+  facet_wrap(~ numeric_category) +
+  labs(fill = "Cluster", title = "Density Plot of Actual Width by Numeric Category") +
+  theme_minimal()
+
+#Box Plot
+ggplot(combined_clustered_data, aes(x = as.factor(cluster), y = `Actual width`, fill = as.factor(cluster))) +
+  geom_boxplot() +
+  facet_wrap(~ numeric_category) +
+  labs(x = "Cluster", fill = "Cluster", title = "Box Plot of Actual Width by Numeric Category") +
+  theme_minimal()
+
+```
+
+This approach will allow you to see the clustering patterns of "Actual width" measurements within each numeric category, disregarding the letter in "Type category". Adjust centers in kmeans() as needed based on your data.
