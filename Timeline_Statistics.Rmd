@@ -73,224 +73,216 @@ use_analysis()
 #* For adding citations & reference lists in an Rmd, see http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html
 ```
 
-#Import data spreadsheet and make a data set
+#Clean spreadsheet before loading into R
+
+Cleaning a spreadsheet before loading it into R is an important step to ensure your data analysis is accurate and efficient. Here are some key steps you can follow to clean your spreadsheet:
+
+1. Remove Unnecessary Data (done in excel sheet and r)
+  - Delete Extra Rows/Columns: Remove any rows or columns that are not relevant to        your analysis, such as empty rows or columns, headers that repeat, or any             irrelevant metadata.
+  - Trim Whitespace: Remove any leading or trailing spaces in your cells.
+
+2. Standardize Formats (done in excel sheet)
+  - Date Formats: Ensure all date entries are in a consistent format (e.g.,               YYYY-MM-DD).
+  - Numeric Formats: Make sure numeric columns do not have any non-numeric characters     (like commas or dollar signs).
+  - Text Consistency: Standardize text entries (e.g., capitalization, spelling, etc.).
+
+3. Handle Missing Values (done in r)
+  - Identify Missing Values: Use functions to highlight or mark missing values.
+  - Decide on a Strategy: Decide whether to remove rows with missing values, fill them     in with a specific value (like the mean or median), or use other imputation             techniques.
+
+4. Correct Data Entry Errors (not done)
+  - Identify Duplicates: Check for and remove duplicate rows if necessary.
+  - Fix Inconsistencies: Look for typos or inconsistencies in categorical data (e.g.,     “male” vs. “Male”).
+
+5. Transform Data if Necessary (not done)
+  - Reformat Data Types: Ensure that each column has the correct data type (e.g.,         factors for categorical data, numeric for quantitative data).
+  - Create New Columns: If necessary, create new columns for calculations or derived      values.
+
+6. Document Changes (done, see above parenthesis)
+  - Keep a record of the changes made to your spreadsheet for transparency and            reproducibility.
+
+7. Save Your Cleaned Data (done, saved as .xlsx)
+  - Save your cleaned spreadsheet in a compatible format (like CSV or Excel) for easy     import into R.
+  
+#Import excel file into a dataset and clean the dataset
+
+Explanation of the Code:
+
+- Loading Libraries: 
+    Ensure that you have the required libraries installed and loaded.
+
+- Reading Data: 
+    The read_excel function is used to read the data from the Excel file.
+
+- Data cleaning:
+    Replace missing values with NAs
+    Trim whitespaces in the excel sheet
+
+- Saving Cleaned Data: 
+    Optionally, save the cleaned dataset back to an Excel file using write.xlsx() from     the openxlsx package (you'll need to install that package as well).
 
 ```{r, echo=TRUE}
-##See and set working directory (Optional - Files are in the raw_data folder)##
-#getwd()
-#setwd()
+### Load excel sheet into a dataset, trim whitespaces and replace missing rows with NAs
 
-##Read data and create a data set##
-
+# Install necessary packages
 #install.packages("readxl")
-library(readxl)
-TimelineDataTrial <- read_excel("analysis/data/raw_data/15_TRIAL_TimelineData.xlsx")
-
-##See data (check if columns and rows are properly named)
-#str(TimelineDataTrial)
-```
-
-#Make cluster analysis of the main "Actural width" category dependent on "Type category -> 1st TRIAL"
-
-```{r, echo=TRUE}
-##1st TRIAL##
-
-#Split Data by Types: Use dplyr to split the data into individual data frames for each type and perform clustering on each one.
-
 #install.packages("dplyr")
-library(dplyr)
+#install.packages("stringr")
+#install.packages("tidyr")
+#install.packages("openxlsx")
 
-##create a data set by type##
+# Load necessary packages
+library(readxl)   # For reading Excel files
+library(dplyr)    # For data manipulation
+library(stringr)  # For string operations
+library(tidyr)    # For missing values operation
+library(openxlsx) # For writing Excel files
 
-#Filter Relevant Columns: Create a new data set. Select only the "Type category" and "Actual width" measurement columns, removing any other columns that aren’t needed for clustering.
+# Step 1: Load the Excel file
+data_trial02 <- read_excel("analysis/data/raw_data/timeline_data_trial02.xlsx")
 
-Trialdata_filtered <- TimelineDataTrial %>% select("Type category", "Actual width")
+# Step 2: View the initial structure of the data
+#str(data_trial02)
 
-#Split Data by Type: Split the dataset into individual data frames for each type.
+# Step 3: Handle missing values
+# Here, we're filling missing values with NA (default behavior)
+# You can also replace them with specific values or remove rows.
+data_trial02 <- data_trial02 %>%
+  mutate(across(everything(), ~ replace_na(., NA)))  # Fill with NA (optional)
 
-Trialdata_by_type <- Trialdata_filtered %>%
-  group_by("Type category") %>%
-  group_split()
+# Step 4: Trim whitespaces from all character columns
+data_trial02_trimmed <- data_trial02 %>%
+  mutate(across(where(is.character), ~ str_trim(.)))  # Trim whitespace
 
-#Cluster "Actual width" Measurements Within Each "Type category": Apply k-means clustering or another clustering algorithm to the "Actual width" measurements within each "Type cateogry". Here’s how with k-means:
+# View the cleaned data
+#head(data_trial02_trimmed)
 
-#install.packages("factoextra")
-library(factoextra)
+# Step 5: Save the cleaned data to a new Excel file
+write.xlsx(data_trial02_trimmed, "analysis/data/raw_data/data_trial02_trimmed.xlsx")
 
-# Define a function to perform clustering
-TrialCluster_AWidth <- function(Trialdata_filtered) {
-  AWidth_data <- scale(Trialdata_filtered$`Actual width`)  # Scale y measurements
-  kmeans_result <- kmeans(AWidth_data, centers = 3, nstart = 25)  # Adjust 'centers' as needed
-  return(kmeans_result)
-}
-
-# Apply clustering for each type
-TrialClusters_AWidth <- lapply(Trialdata_by_type, TrialCluster_AWidth)
-
-##1. Extract Cluster Assignments and Combine Data
-
-#First, we’ll create a loop that applies clustering to "Actual width" for each "Type category" and stores the results in a data frame.
-
-# Loop to perform clustering for each type
-TrialClusterResults <- lapply(1:length(Trialdata_filtered), TrialClusters_AWidth(i)) {
-  type_data <- Trialdata_by_type[[i]]
-  type_name <- unique(type_data$`Type category`)
-}
+### Your dataset is now saved as "data_trial02_trimmed.xlsx" in the raw_data folder
 ```
-#Make cluster analysis of the main "Actural width" category dependent on "Type category -> 2nd TRIAL"
+
+#Make cluster analysis of the main "actural_width" category dependent on "type_category"
 
 To analyze clusters of Actual width within each numeric category of the Type category (ignoring the letter part, such as 1a, 1b, 1c grouped as 1), we can split the data by the numeric portion of the Type category and then perform clustering on Actual width measurements within each group. Here’s how to do it:
 
-0) Run code for creating the "TimelineDataTrial" dataset (Above)
+# STEP 1: change the type_cateogry so "1a" becomes "1"
 
-Step 1) Extract the Numeric Portion of Type Category: Use regular expressions to isolate the numeric part of each Type category value.
+Extract the Numeric Portion of Type Category: Use regular expressions to isolate the numeric part of each Type category value.
 
-Step 2) Group Data by the Numeric Part of Type Category: This allows clustering on Actual width measurements within each numeric category.
-
-Step 3) Perform Clustering on Each Group: Apply k-means or another clustering method on each numeric group separately.
-
-###STEP 1###
 ```{r, echo=TRUE}
 ##Step 1: Load Data and Extract Numeric Category
 
-#Assuming you have loaded your data from Excel:
+# Used library calls:
+#library(dplyr)
+#library(readxl)
 
+# Extract numeric part of type_category (e.g., "1a" becomes "1")
+data_trial02_typesplit <- data_trial02_trimmed %>%
+  mutate(numeric_category = as.numeric(gsub("[^0-9]", "", `type_category`)))
+
+# View the typeslit dataset (optional)
+#head(data_trial02_typesplit)
+
+### You have now created a dataset "data_trial02_typesplit" with an extra column named "numeric_category" where the "type_category" has deleted the letter value in the type (i.e. "1a" becomes "1")
+```
+
+# Step 2: remove 0s but keep NAs
+
+```{r, echo=TRUE}
+
+# load libraries
+#library(dplyr)
+#library(ggplot2)
+#library(cluster)
+#library(readxl)
+
+# Remove rows where actual_width is 0 (keeping NAs)
+data_trial02_remove0 <- data_trial02_typesplit %>%
+  filter(actual_width != 0 | is.na(actual_width))
+
+```
+
+# STEP 3: prepare the data
+
+```{r, echo=TRUE}
+
+# Load necessary libraries
 library(dplyr)
+library(ggplot2)
+library(cluster)
 library(readxl)
 
-# Load data EXAMPLE
-#data <- read_excel("data/raw/yourfile.xlsx")
+# Data preparation (keep only the "numeric_category" and "actual_width")
+data_trial02_prep <- data_trial02_remove0 %>%
+  select(numeric_category, actual_width) %>%
+  mutate(numeric_category = as.factor(numeric_category))
 
-# Extract numeric part of Type category (e.g., "1a" becomes "1")
-TypeData <- TimelineDataTrial %>%
-  mutate(numeric_category = as.numeric(gsub("[^0-9]", "", `Type category`)))
+# Normalize the actual_width (optional but recommended)
+#data$actual_width <- scale(data$actual_width, center = TRUE, scale = TRUE)
+
+# Convert categorical variable to numeric for clustering
+data_trial02_numeric <- data_trial02_prep %>%
+  mutate(numeric_category = as.numeric(as.character(numeric_category)))
+
+# Remove rows with NA values for clustering
+data_trial02_clustering <- data_trial02_numeric %>%
+  filter(!is.na(numeric_category) & !is.na(actual_width))
+
+## You have now created a dataset (data_trial02_clustering) ready for the cluster analysis, only containing the "numeric_category" and "actual_width" rows and cleaned them from 0s and NAs
 ```
 
-###STEP 2###
-```{r, echo=TRUE}
-##Step 2: Group by Numeric Category and Apply Clustering
+# STEP 4: Perform a cluster analysis
 
-#Now, we can group by numeric_category and perform clustering on Actual width within each group.
+To perform a cluster analysis between "numeric_category" and "actual_width" in your dataset (data_trial02_typesplit), you can follow these general steps in R:
 
-# Split data by numeric category
-data_by_numeric <- TypeData %>%
-  group_by(numeric_category) %>%
-  group_split()
+1)Load Necessary Libraries: Ensure you have the necessary packages installed and loaded. Common packages for clustering include dplyr, ggplot2, and cluster.
 
-# Define a function to perform clustering on each group (OBS: Change "TypeData" to your created dataset)
+2) Data Preparation: Prepare your data by ensuring that both numeric_category and actual_width are in the appropriate format for clustering.
 
-# Define a function to perform clustering on Actual width within each numeric category
-cluster_actual_width <- function(TypeData) {
-  # Remove NAs in Actual width
-  TypeData <- TypeData %>% filter(!is.na("Actual width"))
-  
-  # Check if there are any remaining rows
-  if (nrow(TypeData) > 0) {
-    # Ensure ActualWidth is numeric
-    TypeData$ActualWidth <- as.numeric(TypeData$`Actual width`)
+3) Data Normalization: It can be beneficial to normalize your data, especially if the scale of actual_width differs significantly from numeric_category.
 
-    # Scale Actual width for clustering
-    TypeData$scaled_width <- scale(TypeData$`Actual width`)  
-    
-    # Remove any rows that may result in NA after scaling
-    TypeData <- TypeData %>% filter(!is.na(scaled_width) & is.finite(scaled_width))
+4) Clustering: Choose a clustering method, such as K-means or hierarchical clustering, to identify clusters.
 
-    # Count unique scaled values
-    num_unique <- nrow(unique(TypeData[, c("scaled_width")]))  # Count unique scaled width values
-
-    # Determine the number of clusters (1 to 3 based on unique values)
-    num_clusters <- min(3, num_unique)  # Set to 3 or the number of unique points, whichever is smaller
-    
-    # Perform clustering only if there are enough unique points
-    if (num_clusters > 0) {
-      kmeans_result <- kmeans(TypeData$scaled_width, centers = num_clusters, nstart = 25)  # Perform clustering
-      TypeData$cluster <- kmeans_result$cluster  # Assign clusters
-    } else {
-      TypeData$cluster <- NA  # Assign NA if not enough points to cluster
-    }
-  } else {
-    TypeData$cluster <- NA  # Assign NA if df is empty
-  }
-  
-  return(TypeData)
-}
-
-# Apply the clustering function to each group 
-#ERROR: Error: number of cluster centres must lie between 1 and nrow(x)
-clustered_data <- lapply(data_by_numeric, cluster_actual_width)
-
-# Combine the clustered data back into one data frame
-combined_clustered_data <- bind_rows(clustered_data)
-
-```
+5) Visualization: Visualize the clusters to see how actual_width relates to numeric_category.
 
 ```{r, echo=TRUE}
-#TRIAL#
-cluster_actual_width <- function(TypeData) {
-  # Remove NAs in Actual width
-  TypeData <- TypeData %>% filter(!is.na(`Actual width`))
-  
-  # Check if there are any remaining rows
-  if (nrow(TypeData) > 0) {
-    # Ensure Actual width is numeric
-    TypeData$`Actual width` <- as.numeric(df$`Actual width`)
+# install and load libraries
 
-    # Scale Actual width for clustering
-    TypeData$scaled_width <- scale(TypeData$`Actual width`)  
-    
-    # Remove any rows that may result in NA after scaling
-    TypeData <- TypeData %>% filter(!is.na(scaled_width) & is.finite(scaled_width))
+#install.packages("ggplot2")
+#install.packages("cluster")
+#install.packages("readxl")
 
-    # Count unique scaled values
-    num_unique <- nrow(unique(TypeData[, c("scaled_width")]))  # Count unique scaled width values
-
-    # Determine the number of clusters (1 to 3 based on unique values)
-    num_clusters <- min(3, num_unique)
-    
-    # Perform clustering only if there are enough unique points
-    if (num_clusters >= 1) {
-      kmeans_result <- kmeans(TypeData$scaled_width, centers = num_clusters, nstart = 25)  # Perform clustering
-      TypeData$cluster <- kmeans_result$cluster  # Assign clusters
-    } else {
-      TypeData$cluster <- NA  # Assign NA if not enough points to cluster
-    }
-  } else {
-    TypeData$cluster <- NA  # Assign NA if df is empty
-  }
-  
-  return(TypeData)
-}
-
-
-# Apply the clustering function to each group
-clustered_data <- lapply(data_by_numeric, cluster_actual_width)
-
-# Combine the clustered data back into one data frame
-combined_clustered_data <- bind_rows(clustered_data)
-
-```
-
-#Step 3: Visualize Clusters for Each Numeric Category
-Use ggplot2 to plot clusters for each numeric category, either as a density plot or box plot:
-```{r, echo=TRUE}
-#Step 3
-
-#Density Plot
+library(dplyr)
 library(ggplot2)
+library(cluster)
+library(readxl)
 
-ggplot(combined_clustered_data, aes(x = `Actual width`, fill = as.factor(cluster))) +
-  geom_density(alpha = 0.6) +
-  facet_wrap(~ numeric_category) +
-  labs(fill = "Cluster", title = "Density Plot of Actual Width by Numeric Category") +
-  theme_minimal()
+# Choose a number of clusters (e.g., k = 3 -> you can change this later)
+set.seed(123)  # For reproducibility
+k <- 3
+kmeans_result <- kmeans(data_trial02_clustering[, c("numeric_category", "actual_width")], centers = k)
 
-#Box Plot
-ggplot(combined_clustered_data, aes(x = as.factor(cluster), y = `Actual width`, fill = as.factor(cluster))) +
-  geom_boxplot() +
-  facet_wrap(~ numeric_category) +
-  labs(x = "Cluster", fill = "Cluster", title = "Box Plot of Actual Width by Numeric Category") +
+# Add cluster assignments back to the original dataset
+# Ensure the cluster assignment only goes to rows without NAs
+data_trial02_clustering$cluster <- NA  # Initialize the column with NAs
+data_trial02_clustering$cluster[!is.na(data_trial02_clustering$numeric_category) & !is.na(data_trial02_clustering$actual_width)] <- as.factor(kmeans_result$cluster)
+
+# Check that cluster assignments were added correctly
+#summary(data_trial02_clustering$cluster)
+```
+
+# Visualize the cluster plot
+
+```{r, echo=TRUE}
+
+# Visualize the clusters
+ggplot(data_trial02_clustering, aes(x = numeric_category, y = actual_width, color = cluster)) +
+  geom_point() +
+  labs(title = "Cluster Analysis of Actual Width by Numeric Category",
+       x = "Numeric Category",
+       y = "Actual Width") +
   theme_minimal()
 
 ```
-
-This approach will allow you to see the clustering patterns of "Actual width" measurements within each numeric category, disregarding the letter in "Type category". Adjust centers in kmeans() as needed based on your data.
