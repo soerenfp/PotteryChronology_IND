@@ -78,31 +78,31 @@ use_analysis()
 Cleaning a spreadsheet before loading it into R is an important step to ensure your data analysis is accurate and efficient. Here are some key steps you can follow to clean your spreadsheet:
 
 1. Remove Unnecessary Data (done in excel sheet and r)
-  - Delete Extra Rows/Columns: Remove any rows or columns that are not relevant to        your analysis, such as empty rows or columns, headers that repeat, or any             irrelevant metadata.
+  - Delete Extra Rows/Columns: Remove any rows or columns that are not relevant to your analysis, such as empty rows or columns, headers that repeat, or any irrelevant metadata.
   - Trim Whitespace: Remove any leading or trailing spaces in your cells.
 
 2. Standardize Formats (done in excel sheet)
-  - Date Formats: Ensure all date entries are in a consistent format (e.g.,               YYYY-MM-DD).
-  - Numeric Formats: Make sure numeric columns do not have any non-numeric characters     (like commas or dollar signs).
+  - Date Formats: Ensure all date entries are in a consistent format (e.g., YYYY-MM-DD).
+  - Numeric Formats: Make sure numeric columns do not have any non-numeric characters (like commas or dollar signs).
   - Text Consistency: Standardize text entries (e.g., capitalization, spelling, etc.).
 
 3. Handle Missing Values (done in r)
   - Identify Missing Values: Use functions to highlight or mark missing values.
-  - Decide on a Strategy: Decide whether to remove rows with missing values, fill them     in with a specific value (like the mean or median), or use other imputation             techniques.
+  - Decide on a Strategy: Decide whether to remove rows with missing values, fill them in with a specific value (like the mean or median), or use other imputation techniques.
 
 4. Correct Data Entry Errors (not done)
   - Identify Duplicates: Check for and remove duplicate rows if necessary.
-  - Fix Inconsistencies: Look for typos or inconsistencies in categorical data (e.g.,     “male” vs. “Male”).
+  - Fix Inconsistencies: Look for typos or inconsistencies in categorical data (e.g., “male” vs. “Male”).
 
 5. Transform Data if Necessary (not done)
-  - Reformat Data Types: Ensure that each column has the correct data type (e.g.,         factors for categorical data, numeric for quantitative data).
-  - Create New Columns: If necessary, create new columns for calculations or derived      values.
+  - Reformat Data Types: Ensure that each column has the correct data type (e.g., factors for categorical data, numeric for quantitative data).
+  - Create New Columns: If necessary, create new columns for calculations or derived values.
 
 6. Document Changes (done, see above parenthesis)
-  - Keep a record of the changes made to your spreadsheet for transparency and            reproducibility.
+  - Keep a record of the changes made to your spreadsheet for transparency and reproducibility.
 
 7. Save Your Cleaned Data (done, saved as .xlsx)
-  - Save your cleaned spreadsheet in a compatible format (like CSV or Excel) for easy     import into R.
+  - Save your cleaned spreadsheet in a compatible format (like CSV or Excel) for easy import into R.
   
 #Import excel file into a dataset and clean the dataset
 
@@ -119,7 +119,7 @@ Explanation of the Code:
     Trim whitespaces in the excel sheet
 
 - Saving Cleaned Data: 
-    Optionally, save the cleaned dataset back to an Excel file using write.xlsx() from     the openxlsx package (you'll need to install that package as well).
+    Optionally, save the cleaned dataset back to an Excel file using write.xlsx() from the openxlsx package (you'll need to install that package as well).
 
 ```{r, echo=TRUE}
 ### Load excel sheet into a dataset, trim whitespaces and replace missing rows with NAs
@@ -241,11 +241,13 @@ To perform a cluster analysis between "numeric_category" and "actual_width" in y
 
 2) Data Preparation: Prepare your data by ensuring that both numeric_category and actual_width are in the appropriate format for clustering.
 
-3) Data Normalization: It can be beneficial to normalize your data, especially if the scale of actual_width differs significantly from numeric_category.
+3) Data Normalization: It can be beneficial to normalize your data, especially if the scale of actual_width differs significantly from numeric_category. (ONTE: I found that the normalization did only obscure the dataset)
 
-4) Clustering: Choose a clustering method, such as K-means or hierarchical clustering, to identify clusters.
+4) Define how many clusters that are in your dataset
 
-5) Visualization: Visualize the clusters to see how actual_width relates to numeric_category.
+5) Clustering: Choose a clustering method, such as K-means or hierarchical clustering, to identify clusters.
+
+6) Visualization: Visualize the clusters to see how actual_width relates to numeric_category.
 
 ```{r, echo=TRUE}
 # install and load libraries
@@ -259,7 +261,7 @@ library(ggplot2)
 library(cluster)
 library(readxl)
 
-# Choose a number of clusters (e.g., k = 3 -> you can change this later)
+# Choose a number of clusters (e.g., k = 3 -> you can change this later, but you need to "add cluster assignments back to the original dataset" below)
 set.seed(123)  # For reproducibility
 k <- 3
 kmeans_result <- kmeans(data_trial02_clustering[, c("numeric_category", "actual_width")], centers = k)
@@ -271,11 +273,71 @@ data_trial02_clustering$cluster[!is.na(data_trial02_clustering$numeric_category)
 
 # Check that cluster assignments were added correctly
 #summary(data_trial02_clustering$cluster)
+
 ```
+
+OBS: Now you have made a dataset "data_trial02_clustering" that is without all the problems that the previous datasets had. Use this for the further analysis
+
+# Check to see how many clusters that are in your dataset
+
+To determine the optimal number of clusters for your dataset, you can use methods like the (1) elbow method or the (2) silhouette method. Here’s how to implement each of these methods in R:
+
+1. Elbow Method:
+This method involves plotting the total within-cluster sum of squares (WSS) for a range of cluster numbers and looking for the "elbow," where the rate of decrease slows, indicating a good cluster count.
+
+```{r, echo=TRUE}
+# Load necessary libraries
+#library(dplyr)
+#library(ggplot2)
+#library(readxl)
+
+# Elbow Method to find optimal number of clusters
+wss <- vector("numeric", 10)  # Storage for within-cluster sum of squares
+
+for (k in 1:10) {
+  set.seed(123)  # For reproducibility
+  kmeans_result <- kmeans(data_trial02_clustering[, c("numeric_category", "actual_width")], centers = k)
+  wss[k] <- kmeans_result$tot.withinss
+}
+
+# Plot the elbow curve
+plot(1:10, wss, type = "b", pch = 19, frame = FALSE,
+     xlab = "Number of Clusters",
+     ylab = "Total Within-Cluster Sum of Squares",
+     main = "Elbow Method for Optimal Clusters")
+
+```
+
+The elbow plot helps determine the optimal number of clusters by plotting the total within-cluster sum of squares (WSS) for different numbers of clusters. Here's how to interpret it:
+
+Interpreting the Elbow Plot:
+Within-Cluster Sum of Squares (WSS): The y-axis represents WSS, which measures the compactness of clusters (lower values mean more compact clusters).
+
+Elbow Point: As the number of clusters increases, WSS generally decreases because each additional cluster reduces the average distance between points and their assigned cluster center. However, there’s a point where adding more clusters no longer significantly improves compactness—this is the "elbow."
+
+Optimal Number of Clusters:
+
+Look for the "elbow" or bend in the plot where the WSS stops decreasing rapidly. This point indicates the optimal number of clusters, as adding more clusters beyond this point yields only minor improvements.
+If the elbow is not clear, alternative methods like the silhouette plot may provide additional guidance.
+
+Key Points to Remember
+Distinct Elbow: A clear elbow usually indicates a strong clustering structure in the data.
+Gradual Slope: If there's no obvious elbow, it may mean the data does not have a clear clustering structure, or that more advanced clustering techniques may be needed.
+
+INTERPRETATION: I think my elbow is between 4 and 6. Try playing around with either 4, 5, or 6 clusters in the following
 
 # Visualize the cluster plot
 
 ```{r, echo=TRUE}
+
+# Set new cluster (Adjust k to 4, 5, or 6)
+
+set.seed(123)  # For reproducibility
+k <- 5
+kmeans_result <- kmeans(data_trial02_clustering[, c("numeric_category", "actual_width")], centers = k)
+
+# Add cluster assignments back to the dataset
+data_trial02_clustering$cluster <- as.factor(kmeans_result$cluster)
 
 # Visualize the clusters
 ggplot(data_trial02_clustering, aes(x = numeric_category, y = actual_width, color = cluster)) +
@@ -286,3 +348,95 @@ ggplot(data_trial02_clustering, aes(x = numeric_category, y = actual_width, colo
   theme_minimal()
 
 ```
+# How to interpret the cluster plot
+
+A cluster plot visually shows the grouping of data points based on their similarity, as defined by the clustering algorithm. Here's how to interpret it:
+
+Key Elements in the Cluster Plot
+
+Data Points (Colored by Cluster):
+
+Each point represents an observation, and its position on the x- and y-axes reflects its values for numeric_category and actual_width.
+Points with the same color belong to the same cluster. The color grouping indicates which points are most similar according to the k-means algorithm.
+
+Cluster Centroids (If Plotted):
+
+Cluster centroids represent the center or "average" point of each cluster. These points are typically the mean of all data points within a cluster.
+Although centroids aren't shown in the basic plot, adding them can help visualize the center of each cluster and identify how the clusters are spaced relative to each other.
+
+How to Interpret the Plot
+
+Cluster Composition:
+
+Clusters group points that are similar in terms of numeric_category and actual_width. Points within the same cluster should be closer to each other compared to points in different clusters.
+Check whether clusters are well-defined or overlapping. Overlapping clusters may indicate that some categories aren’t strongly distinct on these variables, or that the number of clusters (k) may need adjustment.
+
+Cluster Size and Distribution:
+
+If some clusters are much larger or denser than others, this can provide insights into the distribution of your data. Larger clusters may indicate categories with wider variability, while smaller, tightly grouped clusters may suggest high similarity within those clusters.
+
+Outliers:
+
+Isolated points within or outside clusters may be outliers or unique observations that don’t fit well within any group. These points may warrant further investigation to understand why they don’t cluster with others.
+
+Distance Between Clusters:
+
+Clusters with large gaps between them suggest well-separated groups, while closely spaced clusters may indicate that there’s not a strong separation in the data for these categories.
+
+Next Steps:
+
+Adjust the Number of Clusters: If the clusters don’t appear distinct or are overlapping significantly, consider using an alternative number of clusters and re-evaluate.
+
+Analyze Cluster Characteristics: Beyond visual inspection, analyze the average characteristics within each cluster to gain deeper insights (e.g., average actual_width within each numeric_category cluster).
+
+By studying the cluster plot, you gain insights into the natural groupings within your data and can assess whether the clustering captures meaningful patterns.
+
+# Add Cluster Centroids to the plot
+
+Adding cluster centroids to your cluster plot can help you visually identify the "center" of each cluster. Here’s how to modify your code to calculate and add these centroids to the plot:
+
+First, calculate the centroids of each cluster based on the kmeans results.
+Then, add these centroid points to the ggplot plot.
+
+Explanation of the Code:
+
+centroids <- as.data.frame(kmeans_result$centers): Extracts the cluster centers as a data frame, so they can be used in ggplot.
+
+centroids$cluster <- as.factor(1:k): Adds a cluster column to the centroids data frame, labeling each centroid by its cluster number.
+
+geom_point(data = centroids, aes(x = numeric_category, y = actual_width), color = "black", shape = 4, size = 5, stroke = 1.5): Adds the centroids to the plot. Here:
+
+shape = 4 uses an "X" shape to distinguish centroids.
+
+size = 5 and stroke = 1.5 make the centroids visually distinct.
+
+This will add black "X" marks to represent the centroids of each cluster on your scatter plot.
+
+```{r, echo=TRUE}
+
+# Calculate centroids
+centroids <- as.data.frame(kmeans_result$centers)  # Extract centers as a data frame
+centroids$cluster <- as.factor(1:k)  # Label the clusters
+
+# Visualize clusters with centroids
+ggplot(data_trial02_clustering, aes(x = numeric_category, y = actual_width, color = cluster)) +
+  geom_point(size = 3, alpha = 0.6) +
+  geom_point(data = centroids, aes(x = numeric_category, y = actual_width), 
+             color = "black", shape = 4, size = 5, stroke = 1.5) +  # Add centroids
+  labs(title = "Cluster Analysis with Centroids",
+       x = "Numeric Category",
+       y = "Actual Width") +
+  theme_minimal()
+
+```
+PRELIM interpretation: 
+
+- I think I need to use 4 clusters.
+- I must find out why there is no data in the "12" category of vessels
+- I must see why there is only one datapoint in the "13" category of vessels
+
+- For now, I think the clusterplot means that the category of vessels include the clusters identified by the colour, so vessel category 1 includes size clusters 1, 5, 2, 3, but vessel category 14 only includes size clusters 4. 
+
+- I think the "centorids" describe that vessel category 4 (vertical vessels) have the center of size clusters 2 and 3. Vessel category 5 (closed vessels) has the center of size cluster 5. I think that vessel category 14 (bottles) have the center of size cluster 4. 
+
+- I do not understand why size cluster 1 is hovering above vessel type 6 (tightly closed vessels) but the vessel types do not include this size cluster. Perhaps this is because I need to adjust the clusters to 4, or because the size clusters centroids are in the middle between vessel types 1-5 and type 10. 
