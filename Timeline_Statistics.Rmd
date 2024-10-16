@@ -178,6 +178,9 @@ Extract the Numeric Portion of Type Category: Use regular expressions to isolate
 #library(dplyr)
 #library(readxl)
 
+# Load data
+data_trial02_trimmed <- read_excel("analysis/data/raw_data/data_trial02_trimmed.xlsx")
+
 # Extract numeric part of type_category (e.g., "1a" becomes "1")
 data_trial02_typesplit <- data_trial02_trimmed %>%
   mutate(numeric_category = as.numeric(gsub("[^0-9]", "", `type_category`)))
@@ -333,7 +336,7 @@ INTERPRETATION: I think my elbow is between 4 and 6. Try playing around with eit
 # Set new cluster (Adjust k to 4, 5, or 6)
 
 set.seed(123)  # For reproducibility
-k <- 5
+k <- 4
 kmeans_result <- kmeans(data_trial02_clustering[, c("numeric_category", "actual_width")], centers = k)
 
 # Add cluster assignments back to the dataset
@@ -440,3 +443,100 @@ PRELIM interpretation:
 - I think the "centorids" describe that vessel category 4 (vertical vessels) have the center of size clusters 2 and 3. Vessel category 5 (closed vessels) has the center of size cluster 5. I think that vessel category 14 (bottles) have the center of size cluster 4. 
 
 - I do not understand why size cluster 1 is hovering above vessel type 6 (tightly closed vessels) but the vessel types do not include this size cluster. Perhaps this is because I need to adjust the clusters to 4, or because the size clusters centroids are in the middle between vessel types 1-5 and type 10. 
+
+# Add a legend to the final cluster plot
+
+Explanation:
+
+- main_plot: Contains your cluster plot with the cluster legend on the right.
+
+- legend_table: A table of x-axis category descriptions.
+
+- legend_plot: A plot version of legend_table using geom_text() to display each category with its description.
+
+- plot_grid(): Combines the main_plot and legend_plot horizontally, placing the main plot on the left and the custom legend on the far right.
+
+- This code will display the cluster plot with the x-axis legend appearing as a labeled table on the far right side. Adjust rel_widths to resize the plot and table as needed.
+
+- plot.margin in both main_plot and legend_plot: Adjusted to reduce space between the plots and bring them closer.
+
+- rel_widths = c(3, 1.2): Increased width allocated to the legend_plot to allow more space for the text.
+
+This should ensure that the full text of each category is displayed. Adjust rel_widths and plot.margin further as needed for the best fit.
+
+```{r, echo=TRUE}
+## FINAL CLUSTER PLOT
+
+#Install and load libraries
+#install.packages("cowplot")    #For working with two legends in the plot
+library(ggplot2)
+library(cowplot)
+
+# Main cluster plot with reduced right margin to bring it closer to the custom legend
+main_plot <- ggplot(data_trial02_clustering, aes(x = numeric_category, y = actual_width, color = factor(cluster))) +
+  geom_point(size = 3, alpha = 0.6) +
+  geom_point(data = centroids, aes(x = numeric_category, y = actual_width), 
+             color = "black", shape = 4, size = 5, stroke = 1.5) +  # Add centroids
+  labs(title = "Cluster Analysis with Centroids",
+       x = "Vessel type",
+       y = "Vessel width (cm)",
+       color = "Cluster") +
+  scale_x_continuous(breaks = 1:15) +  # Set x-axis to display numbers 1-15
+  scale_y_continuous(breaks = seq(0, max(data_trial02_clustering$actual_width, na.rm = TRUE), by = 10)) +  # Set y-axis to display every 10 cm
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    plot.margin = margin(5, -90, 5, 5, "pt")  # Adjust right margin legend
+  )
+
+# Legend table with reduced left margin to bring it closer to the main plot
+legend_table <- data.frame(
+  Numeric_Category = 1:15,
+  Description = c("Wide-open vessels", "Open vessels", "Closed horizontal-oval vessels", 
+                  "Vertical vessels", "Closed vessels", "Tightly-closed vessels", 
+                  "Open carinated vessels", "Wide-open carinated vessels", 
+                  "Vertical-vertical oval vessels", "Closed-vertical oval vessels", 
+                  "Tightly-closed vertical oval vessels", "Lids", 
+                  "Flasks", "Bottles", "Tellem tripods")
+)
+
+# Convert the legend table to a plot with reduced left margin and smaller text size
+legend_plot <- ggplot(legend_table, aes(x = "", y = Numeric_Category, label = paste(Numeric_Category, "=", Description))) +
+  geom_text(hjust = 0, size = 3) +  # Reduced text size
+  theme_void() +
+  theme(
+    plot.margin = margin(5, 5, 5, -10, "pt")  # Reduced left margin legend
+  )
+
+# Arrange the main plot and the custom legend side by side with adjusted width ratios
+cowplot::plot_grid(main_plot, legend_plot, ncol = 2, rel_widths = c(3, 4))  # Adjust rel_width for legend plot if needed
+
+```
+OK! Now I got my plot to look nice with two legends! 
+Perhaps I should try to do the same analysis only with 2 or 3 clusters (See elbow chart)?
+
+PRELIM interpretation:
+
+- Vessel category 5 (closed vessels) is the most numerous and also with a fair spread of all the 4 clusters of vessel width
+- Vessel category 4 (vertical vessels) is the second most numerous also containing all the 4 clusters of width, but not so many from cluster 1
+- Vessel category 1 (wide open vessels) and 2 (open vessels) are quite the same, but cat. 1 contains less small vessels and cat. 2 contains less larger vessels. As expected!
+- Vessel category 7 (Open carinated vessels) are mainly clustering in cat. 3 and 2
+- Vessel category 8 (wide-open carinated vessels) does not contain a lot of data, but is mainly clustering in cat. 2
+- Vessel category 3 (closed horizontal oval vessels) are mainly clustering in cat. 4
+- Vessel category 6 (tightly-closed vessels) are mainly clustering in category 4 and without any small cat. 3 sizes (as expected!)
+- Vessel category 9 (vertical-vertical oval vessels) mainly cluster in the lower cat. 3 which is a surprice!
+- Vessel category 10 (closed vertical oval vessels) has a nice spread of the clusters (surprise?), but mainly tails towards a higher width/cat. 1-2
+- Vessel category 11 (tightly closed vertical oval vessels) does not contain a lot of data, but clusters in cat. 4
+- Vessel category 12 are lids so I need to delete this category from the dataset
+- Vessel category 13-14 (flasks and bottles) does not have a lot of data, but mainly cluster in the smaller cat. 3 as expected
+- Vessel category 15 (Tellem tripods) mainly cluster in the lower cat. 3 as expected
+- Perhaps the centroids do not help me a lot??
+
+NEXT STEPS:
+
+- Make a simple boxplot of how many data points you have for each vessel category
+- Make a principal component analysis between the "width" and "vessel type" to see whether some types have smaller or larger sizes. Or perhaps try this with the square cm2?
+- Make a principal component analysis of the "orifice" and the vessel type
+- Make a principal component analysis of the height and the vessel type
+
+- Prepare the "date" category in your excel sheet. Make all the dates numeric!
