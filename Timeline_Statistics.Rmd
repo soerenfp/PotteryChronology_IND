@@ -122,6 +122,8 @@ Explanation of the Code:
     Optionally, save the cleaned dataset back to an Excel file using write.xlsx() from the openxlsx package (you'll need to install that package as well).
 
 ```{r, echo=TRUE}
+# YOU CAN JUMP DIRECTLY TO STEP 1
+
 ### Load excel sheet into a dataset, trim whitespaces and replace missing rows with NAs
 
 # Install necessary packages
@@ -132,14 +134,14 @@ Explanation of the Code:
 #install.packages("openxlsx")
 
 # Load necessary packages
-library(readxl)   # For reading Excel files
-library(dplyr)    # For data manipulation
-library(stringr)  # For string operations
-library(tidyr)    # For missing values operation
-library(openxlsx) # For writing Excel files
+#library(readxl)   # For reading Excel files
+#library(dplyr)    # For data manipulation
+#library(stringr)  # For string operations
+#library(tidyr)    # For missing values operation
+#library(openxlsx) # For writing Excel files
 
 # Step 1: Load the Excel file
-data_trial02 <- read_excel("analysis/data/raw_data/timeline_data_trial02.xlsx")
+#data_trial02 <- read_excel("analysis/data/raw_data/timeline_data_trial02.xlsx")
 
 # Step 2: View the initial structure of the data
 #str(data_trial02)
@@ -147,27 +149,24 @@ data_trial02 <- read_excel("analysis/data/raw_data/timeline_data_trial02.xlsx")
 # Step 3: Handle missing values
 # Here, we're filling missing values with NA (default behavior)
 # You can also replace them with specific values or remove rows.
-data_trial02 <- data_trial02 %>%
-  mutate(across(everything(), ~ replace_na(., NA)))  # Fill with NA (optional)
+#data_trial02 <- data_trial02 %>%
+  #mutate(across(everything(), ~ replace_na(., NA)))  # Fill with NA (optional)
 
 # Step 4: Trim whitespaces from all character columns
-data_trial02_trimmed <- data_trial02 %>%
-  mutate(across(where(is.character), ~ str_trim(.)))  # Trim whitespace
+#data_trial02_trimmed <- data_trial02 %>%
+  #mutate(across(where(is.character), ~ str_trim(.)))  # Trim whitespace
 
 # View the cleaned data
 #head(data_trial02_trimmed)
 
 # Step 5: Save the cleaned data to a new Excel file
-write.xlsx(data_trial02_trimmed, "analysis/data/raw_data/data_trial02_trimmed.xlsx")
+#write.xlsx(data_trial02_trimmed, "analysis/data/raw_data/data_trial02_trimmed.xlsx")
 
 ### Your dataset is now saved as "data_trial02_trimmed.xlsx" in the raw_data folder
 ```
+# Change the type_cateogry so "1a" becomes "1"
 
-#Make cluster analysis of the main "actural_width" category dependent on "type_category"
-
-To analyze clusters of Actual width within each numeric category of the Type category (ignoring the letter part, such as 1a, 1b, 1c grouped as 1), we can split the data by the numeric portion of the Type category and then perform clustering on Actual width measurements within each group. Here’s how to do it:
-
-# STEP 1: change the type_cateogry so "1a" becomes "1"
+OBS: From here I canged all the names of the datasets so they include "AW" (Actual Width) because I want to make the same cluster analysis with "height", "orifice" and "square cm2"
 
 Extract the Numeric Portion of Type Category: Use regular expressions to isolate the numeric part of each Type category value.
 
@@ -175,39 +174,118 @@ Extract the Numeric Portion of Type Category: Use regular expressions to isolate
 ##Step 1: Load Data and Extract Numeric Category
 
 # Used library calls:
-#library(dplyr)
-#library(readxl)
+library(readxl)   # For reading Excel files
+library(dplyr)    # For data manipulation
+library(stringr)  # For string operations
+library(tidyr)    # For missing values operation
+library(openxlsx) # For writing Excel files
 
 # Load data
-data_trial02_trimmed <- read_excel("analysis/data/raw_data/data_trial02_trimmed.xlsx")
+data_trial02_trimmedAW <- read_excel("analysis/data/raw_data/data_trial02_trimmed.xlsx")
 
 # Extract numeric part of type_category (e.g., "1a" becomes "1")
-data_trial02_typesplit <- data_trial02_trimmed %>%
+data_trial02_typesplitAW <- data_trial02_trimmedAW %>%
   mutate(numeric_category = as.numeric(gsub("[^0-9]", "", `type_category`)))
 
 # View the typeslit dataset (optional)
-#head(data_trial02_typesplit)
+#head(data_trial02_typesplitAW)
 
-### You have now created a dataset "data_trial02_typesplit" with an extra column named "numeric_category" where the "type_category" has deleted the letter value in the type (i.e. "1a" becomes "1")
 ```
 
-# Step 2: remove 0s but keep NAs
+You have now created a dataset "data_trial02_typesplitAW" with an extra column named "numeric_category" where the "type_category" has deleted the letter value in the type (i.e. "1a" becomes "1")
+
+# Count how many data points there are under each 'vessel type' category
+
+You can create a boxplot that shows the number of data points for each vessel type using the ggplot2 package in R. Below is an example code snippet to achieve this:
+
+```{r, echo=TRUE}
+# Install and load libraries
+# install.packages("ggplot2")  # Uncomment if you haven't installed ggplot2
+# install.packages("cowplot")  # Uncomment if you haven't installed cowplot
+library(ggplot2)
+library(cowplot)
+
+# Create a data frame to count the number of data points for each vessel type
+vessel_counts <- data.frame(table(data_trial02_typesplitAW$numeric_category))
+colnames(vessel_counts) <- c("Vessel_Type", "Count")
+
+# Create the boxplot with adjusted width
+boxplot_plot <- ggplot(vessel_counts, aes(x = as.factor(Vessel_Type), y = Count)) +
+  geom_boxplot(fill = "lightblue", outlier.color = "red") +
+  labs(title = "Boxplot of Data Points per Vessel Type",
+       x = "Vessel Type",
+       y = "Number of Data Points") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels for better visibility
+    plot.margin = margin(10, 10, 10, 10)  # Adjust plot margins if needed
+  )
+
+# Legend table for vessel types
+legend_table <- data.frame(
+  Vessel_Type = 1:15,
+  Description = c("Wide-open vessels", "Open vessels", "Closed horizontal-oval vessels", 
+                  "Vertical vessels", "Closed vessels", "Tightly-closed vessels", 
+                  "Open carinated vessels", "Wide-open carinated vessels", 
+                  "Vertical-vertical oval vessels", "Closed-vertical oval vessels", 
+                  "Tightly-closed vertical oval vessels", "Lids", 
+                  "Flasks", "Bottles", "Tellem tripods")
+)
+
+# Convert the legend table to a plot with adjusted margins
+legend_plot <- ggplot(legend_table, aes(x = "", y = Vessel_Type, label = paste(Vessel_Type, "=", Description))) +
+  geom_text(hjust = 0, size = 3) +  # Reduced text size
+  theme_void() +
+  theme(
+    plot.margin = margin(5, 100, 5, -60, "pt")  # Reduced right margin legend to move it closer to the plot
+  )
+
+# Arrange the boxplot and the legend side by side with adjusted widths
+cowplot::plot_grid(boxplot_plot, legend_plot, ncol = 2, rel_widths = c(3, 3))  # Make the boxplot narrower adjusting rel_width
+
+```
+SO, the plot is not perfect, but I can adjust it later.
+
+# PRELIM interpretation:
+
+- Vessel category 5 (closed vessels) has by far the most data points -> interesting because it also has the most multi purpose function!!!
+- 2nd most data point are vessel category 4 (vertical vessels)
+- 3rd most data point are vessel category 2 (open vessels)
+- 4th most data point are vessel category 7 (Open carinated vessels)
+- 5th most data point are vessel category 1 (wide-open vessels)
+- 6th most data point are vessel category 15 (Tellem tripods)
+- 7th and 8th most data point are vessel category 3 (closed horizontal-oval vessels) and 10 (closed vertical-oval vessels)
+- 9th most data point are vessel category 6 (tightly-closed vessels)
+- 10th most data point are vessel category 8 (wide-open carinated vessels)
+- 11th most data point are vessel category 9 (Vertical vertical-oval vessels)
+- 12th most data point are vessel category 11 (tightly-closed vertical oval vessels)
+- 13th most data point are vessel category 14 (bottles)
+- 14th most data point are vessel category 13 (flasks)
+- vessel category 12 is left out because there are no data points (lids)
+
+- There is actually a correlation between how "multi-purpose" a vessel is and the amount of data points I have collected. The "closed vessels", "vertical vessels" and the "open vessels" are the three categories you can describe as the most multi-purpose!
+
+# Make cluster analysis of the main "actural_width" category dependent on "type_category"
+
+To analyze clusters of Actual width within each numeric category of the Type category (ignoring the letter part, such as 1a, 1b, 1c grouped as 1), we can split the data by the numeric portion of the Type category and then perform clustering on Actual width measurements within each group. Here’s how to do it:
+
+# Remove 0s but keep NAs of 'actual width' column
 
 ```{r, echo=TRUE}
 
 # load libraries
-#library(dplyr)
-#library(ggplot2)
-#library(cluster)
-#library(readxl)
+library(dplyr)
+library(ggplot2)
+library(cluster)
+library(readxl)
 
 # Remove rows where actual_width is 0 (keeping NAs)
-data_trial02_remove0 <- data_trial02_typesplit %>%
+data_trial02_remove0AW <- data_trial02_typesplitAW %>%
   filter(actual_width != 0 | is.na(actual_width))
 
 ```
 
-# STEP 3: prepare the data
+# Prepare the data of the actual width column
 
 ```{r, echo=TRUE}
 
@@ -217,28 +295,29 @@ library(ggplot2)
 library(cluster)
 library(readxl)
 
-# Data preparation (keep only the "numeric_category" and "actual_width")
-data_trial02_prep <- data_trial02_remove0 %>%
+# Data preparation (keep only the "numeric_category" and "actual_width" columns)
+data_trial02_prepAW <- data_trial02_remove0AW %>%
   select(numeric_category, actual_width) %>%
   mutate(numeric_category = as.factor(numeric_category))
 
-# Normalize the actual_width (optional but recommended)
+# Normalize the actual_width (optional but recommended, my data looks very strange if I do this)
 #data$actual_width <- scale(data$actual_width, center = TRUE, scale = TRUE)
 
 # Convert categorical variable to numeric for clustering
-data_trial02_numeric <- data_trial02_prep %>%
+data_trial02_numericAW <- data_trial02_prepAW %>%
   mutate(numeric_category = as.numeric(as.character(numeric_category)))
 
 # Remove rows with NA values for clustering
-data_trial02_clustering <- data_trial02_numeric %>%
+data_trial02_clusteringAW <- data_trial02_numericAW %>%
   filter(!is.na(numeric_category) & !is.na(actual_width))
 
-## You have now created a dataset (data_trial02_clustering) ready for the cluster analysis, only containing the "numeric_category" and "actual_width" rows and cleaned them from 0s and NAs
 ```
+
+You have now created a dataset (data_trial02_clusteringAW) ready for the cluster analysis, only containing the "numeric_category" and "actual_width" rows and cleaned them from 0s and NAs
 
 # STEP 4: Perform a cluster analysis
 
-To perform a cluster analysis between "numeric_category" and "actual_width" in your dataset (data_trial02_typesplit), you can follow these general steps in R:
+To perform a cluster analysis between "numeric_category" and "actual_width" in your dataset (data_trial02_typesplitAW), you can follow these general steps in R:
 
 1)Load Necessary Libraries: Ensure you have the necessary packages installed and loaded. Common packages for clustering include dplyr, ggplot2, and cluster.
 
@@ -267,19 +346,19 @@ library(readxl)
 # Choose a number of clusters (e.g., k = 3 -> you can change this later, but you need to "add cluster assignments back to the original dataset" below)
 set.seed(123)  # For reproducibility
 k <- 3
-kmeans_result <- kmeans(data_trial02_clustering[, c("numeric_category", "actual_width")], centers = k)
+kmeans_resultAW <- kmeans(data_trial02_clusteringAW[, c("numeric_category", "actual_width")], centers = k)
 
 # Add cluster assignments back to the original dataset
 # Ensure the cluster assignment only goes to rows without NAs
-data_trial02_clustering$cluster <- NA  # Initialize the column with NAs
-data_trial02_clustering$cluster[!is.na(data_trial02_clustering$numeric_category) & !is.na(data_trial02_clustering$actual_width)] <- as.factor(kmeans_result$cluster)
+data_trial02_clusteringAW$cluster <- NA  # Initialize the column with NAs
+data_trial02_clusteringAW$cluster[!is.na(data_trial02_clusteringAW$numeric_category) & !is.na(data_trial02_clusteringAW$actual_width)] <- as.factor(kmeans_resultAW$cluster)
 
 # Check that cluster assignments were added correctly
-#summary(data_trial02_clustering$cluster)
+summary(data_trial02_clusteringAW$cluster)
 
 ```
 
-OBS: Now you have made a dataset "data_trial02_clustering" that is without all the problems that the previous datasets had. Use this for the further analysis
+OBS: Now you have made a dataset "data_trial02_clusteringAW" that is without all the problems that the previous datasets I had. Use this for the further analysis
 
 # Check to see how many clusters that are in your dataset
 
@@ -295,16 +374,16 @@ This method involves plotting the total within-cluster sum of squares (WSS) for 
 #library(readxl)
 
 # Elbow Method to find optimal number of clusters
-wss <- vector("numeric", 10)  # Storage for within-cluster sum of squares
+wssAW <- vector("numeric", 10)  # Storage for within-cluster sum of squares
 
 for (k in 1:10) {
   set.seed(123)  # For reproducibility
-  kmeans_result <- kmeans(data_trial02_clustering[, c("numeric_category", "actual_width")], centers = k)
-  wss[k] <- kmeans_result$tot.withinss
+  kmeans_resultAW <- kmeans(data_trial02_clusteringAW[, c("numeric_category", "actual_width")], centers = k)
+  wssAW[k] <- kmeans_resultAW$tot.withinss
 }
 
 # Plot the elbow curve
-plot(1:10, wss, type = "b", pch = 19, frame = FALSE,
+plot(1:10, wssAW, type = "b", pch = 19, frame = FALSE,
      xlab = "Number of Clusters",
      ylab = "Total Within-Cluster Sum of Squares",
      main = "Elbow Method for Optimal Clusters")
@@ -329,25 +408,65 @@ Gradual Slope: If there's no obvious elbow, it may mean the data does not have a
 
 INTERPRETATION: I think my elbow is between 4 and 6. Try playing around with either 4, 5, or 6 clusters in the following
 
+# Visualize the cluster plot with automatic optimal amount of clusters
+
+```{r, echo=TRUE}
+
+# Install and load necessary libraries
+# install.packages("factoextra")  # For visualizing clusters and optimal number
+
+library(ggplot2)
+library(factoextra)
+
+# Calculate WCSS for different numbers of clusters (1 to 15)
+wcssAW <- numeric()
+for (i in 1:15) {
+  set.seed(123)
+  kmeans_resultAW <- kmeans(data_trial02_clusteringAW[, c("numeric_category", "actual_width")], centers = i)
+  wcssAW[i] <- sum(kmeans_resultAW$tot.withinss)
+}
+
+# Calculate the optimal number of clusters using the "elbow method" by finding the maximum drop
+wcss_diffsAW <- diff(wcssAW)  # First derivative (differences between consecutive WCSS values)
+optimal_clustersAW <- which.max(abs(diff(wcss_diffsAW))) + 1  # Find the biggest drop in WCSS
+
+# Elbow plot with the optimal number of clusters marked
+elbow_plotAW <- ggplot(data = data.frame(Clusters = 1:15, WCSSAW = wcssAW), aes(x = Clusters, y = WCSSAW)) +
+  geom_point(size = 4) +
+  geom_line(linewidth = 1) +
+  labs(title = "Elbow Plot for Optimal Clusters of 'actual width'",
+       x = "Number of Clusters",
+       y = "Within-Cluster Sum of Squares (WCSS)") +
+  theme_minimal() +
+  geom_vline(xintercept = optimal_clustersAW, linetype = "dashed", color = "red", size = 1) +
+  annotate("text", x = optimal_clustersAW, y = max(wcssAW), label = paste("Optimal Clusters =", optimal_clustersAW), 
+           color = "red", vjust = -1, size = 4)
+
+# Display the plot
+print(elbow_plotAW)
+
+```
+So my optimal amount of clusters are 2!
+
 # Visualize the cluster plot
 
 ```{r, echo=TRUE}
 
-# Set new cluster (Adjust k to 4, 5, or 6)
+# Set new cluster (Adjust k to 2)
 
 set.seed(123)  # For reproducibility
-k <- 4
-kmeans_result <- kmeans(data_trial02_clustering[, c("numeric_category", "actual_width")], centers = k)
+kAW <- 2
+kmeans_resultAW <- kmeans(data_trial02_clusteringAW[, c("numeric_category", "actual_width")], centers = kAW)
 
 # Add cluster assignments back to the dataset
-data_trial02_clustering$cluster <- as.factor(kmeans_result$cluster)
+data_trial02_clusteringAW$cluster <- as.factor(kmeans_resultAW$cluster)
 
 # Visualize the clusters
-ggplot(data_trial02_clustering, aes(x = numeric_category, y = actual_width, color = cluster)) +
+ggplot(data_trial02_clusteringAW, aes(x = numeric_category, y = actual_width, color = cluster)) +
   geom_point() +
-  labs(title = "Cluster Analysis of Actual Width by Numeric Category",
-       x = "Numeric Category",
-       y = "Actual Width") +
+  labs(title = "Cluster Analysis of 'actual width' by 'vessel type'",
+       x = "Vessel type",
+       y = "Actual width (cm)") +
   theme_minimal()
 
 ```
@@ -418,15 +537,15 @@ This will add black "X" marks to represent the centroids of each cluster on your
 ```{r, echo=TRUE}
 
 # Calculate centroids
-centroids <- as.data.frame(kmeans_result$centers)  # Extract centers as a data frame
-centroids$cluster <- as.factor(1:k)  # Label the clusters
+centroidsAW <- as.data.frame(kmeans_resultAW$centers)  # Extract centers as a data frame
+centroidsAW$cluster <- as.factor(1:k)  # Label the clusters
 
 # Visualize clusters with centroids
-ggplot(data_trial02_clustering, aes(x = numeric_category, y = actual_width, color = cluster)) +
+ggplot(data_trial02_clusteringAW, aes(x = numeric_category, y = actual_width, color = cluster)) +
   geom_point(size = 3, alpha = 0.6) +
-  geom_point(data = centroids, aes(x = numeric_category, y = actual_width), 
+  geom_point(data = centroidsAW, aes(x = numeric_category, y = actual_width), 
              color = "black", shape = 4, size = 5, stroke = 1.5) +  # Add centroids
-  labs(title = "Cluster Analysis with Centroids",
+  labs(title = "Cluster Analysis of 'actual width' with Centroids",
        x = "Numeric Category",
        y = "Actual Width") +
   theme_minimal()
@@ -434,15 +553,10 @@ ggplot(data_trial02_clustering, aes(x = numeric_category, y = actual_width, colo
 ```
 PRELIM interpretation: 
 
-- I think I need to use 4 clusters.
-- I must find out why there is no data in the "12" category of vessels
-- I must see why there is only one datapoint in the "13" category of vessels
-
-- For now, I think the clusterplot means that the category of vessels include the clusters identified by the colour, so vessel category 1 includes size clusters 1, 5, 2, 3, but vessel category 14 only includes size clusters 4. 
-
-- I think the "centorids" describe that vessel category 4 (vertical vessels) have the center of size clusters 2 and 3. Vessel category 5 (closed vessels) has the center of size cluster 5. I think that vessel category 14 (bottles) have the center of size cluster 4. 
-
-- I do not understand why size cluster 1 is hovering above vessel type 6 (tightly closed vessels) but the vessel types do not include this size cluster. Perhaps this is because I need to adjust the clusters to 4, or because the size clusters centroids are in the middle between vessel types 1-5 and type 10. 
+- I have 2 clusters of 'actual width'
+- All my vessel types include cluster 2
+- Vessel types 9, 13 and 14 only have cluster 2 and not cluster 1
+- The centroids are centered around vessel type 5 (closed vessels). Is this perhaps because this vessel category contains most data points, or is it perhaps because it is the most multi-purpose vessel -> i.e. that it is the "median" of the data set?
 
 # Add a legend to the final cluster plot
 
@@ -471,26 +585,60 @@ This should ensure that the full text of each category is displayed. Adjust rel_
 #install.packages("cowplot")    #For working with two legends in the plot
 library(ggplot2)
 library(cowplot)
+library(dplyr)
+
+# Add a new column to indicate the predominant cluster for each vessel type
+data_trial02_clusteringAW <- data_trial02_clusteringAW %>%
+  group_by(numeric_category) %>%
+  mutate(predominant_cluster = ifelse(sum(cluster == 1) >= sum(cluster == 2), "Cluster 1", "Cluster 2"))
 
 # Main cluster plot with reduced right margin to bring it closer to the custom legend
-main_plot <- ggplot(data_trial02_clustering, aes(x = numeric_category, y = actual_width, color = factor(cluster))) +
+main_plotAW <- ggplot(data_trial02_clusteringAW, aes(x = numeric_category, y = actual_width, color = factor(cluster), shape = predominant_cluster)) +
   geom_point(size = 3, alpha = 0.6) +
-  geom_point(data = centroids, aes(x = numeric_category, y = actual_width), 
+  geom_point(data = centroidsAW, aes(x = numeric_category, y = actual_width), 
              color = "black", shape = 4, size = 5, stroke = 1.5) +  # Add centroids
-  labs(title = "Cluster Analysis with Centroids",
+  labs(title = "Cluster Analysis of 'actual width' with Centroids",
        x = "Vessel type",
        y = "Vessel width (cm)",
-       color = "Cluster") +
+       color = "Cluster",
+       shape = "Predominant Cluster") +
   scale_x_continuous(breaks = 1:15) +  # Set x-axis to display numbers 1-15
-  scale_y_continuous(breaks = seq(0, max(data_trial02_clustering$actual_width, na.rm = TRUE), by = 10)) +  # Set y-axis to display every 10 cm
+  scale_y_continuous(breaks = seq(0, max(data_trial02_clusteringAW$actual_width, na.rm = TRUE), by = 10)) +  # Set y-axis to display every 10 cm
   theme_minimal() +
   theme(
     legend.position = "right",
     plot.margin = margin(5, -90, 5, 5, "pt")  # Adjust right margin legend
   )
 
+# Main cluster plot with reduced right margin to bring it closer to the custom legend
+main_plotAW <- ggplot(data_trial02_clusteringAW, aes(x = numeric_category, y = actual_width, color = factor(cluster))) +
+  geom_point(size = 3, alpha = 0.6) +
+  geom_point(data = centroidsAW, aes(x = numeric_category, y = actual_width), 
+             color = "black", shape = 4, size = 5, stroke = 1.5) +  # Add centroids
+  labs(title = "Cluster Analysis of 'actual width' with Centroids",
+       x = "Vessel type",
+       y = "Vessel width (cm)",
+       color = "Cluster") +
+  scale_x_continuous(breaks = 1:15) +  # Set x-axis to display numbers 1-15
+  scale_y_continuous(breaks = seq(0, max(data_trial02_clusteringAW$actual_width, na.rm = TRUE), by = 10)) +  # Set y-axis to display every 10 cm
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    plot.margin = margin(5, -90, 5, 5, "pt")  # Adjust right margin legend
+  )
+
+# Calculate min and max for each cluster to insert in the legend (Change this if you have more than 2 clusters)
+cluster1AW_min <- min(data_trial02_clusteringAW$actual_width[data_trial02_clusteringAW$cluster == 1], na.rm = TRUE)
+cluster1AW_max <- max(data_trial02_clusteringAW$actual_width[data_trial02_clusteringAW$cluster == 1], na.rm = TRUE)
+cluster2AW_min <- min(data_trial02_clusteringAW$actual_width[data_trial02_clusteringAW$cluster == 2], na.rm = TRUE)
+cluster2AW_max <- max(data_trial02_clusteringAW$actual_width[data_trial02_clusteringAW$cluster == 2], na.rm = TRUE)
+
+# Replace placeholders with actual values in the legend (Change this if you have more than 2 clusters)
+main_plotAW <- main_plotAW + 
+  labs(color = paste("Cluster\n1:", cluster1AW_min, "-", cluster1AW_max, "cm\n2:", cluster2AW_min, "-", cluster2AW_max, "cm"))
+
 # Legend table with reduced left margin to bring it closer to the main plot
-legend_table <- data.frame(
+legend_tableAW <- data.frame(
   Numeric_Category = 1:15,
   Description = c("Wide-open vessels", "Open vessels", "Closed horizontal-oval vessels", 
                   "Vertical vessels", "Closed vessels", "Tightly-closed vessels", 
@@ -501,7 +649,7 @@ legend_table <- data.frame(
 )
 
 # Convert the legend table to a plot with reduced left margin and smaller text size
-legend_plot <- ggplot(legend_table, aes(x = "", y = Numeric_Category, label = paste(Numeric_Category, "=", Description))) +
+legend_plotAW <- ggplot(legend_tableAW, aes(x = "", y = Numeric_Category, label = paste(Numeric_Category, "=", Description))) +
   geom_text(hjust = 0, size = 3) +  # Reduced text size
   theme_void() +
   theme(
@@ -509,13 +657,30 @@ legend_plot <- ggplot(legend_table, aes(x = "", y = Numeric_Category, label = pa
   )
 
 # Arrange the main plot and the custom legend side by side with adjusted width ratios
-cowplot::plot_grid(main_plot, legend_plot, ncol = 2, rel_widths = c(3, 4))  # Adjust rel_width for legend plot if needed
+cowplot::plot_grid(main_plotAW, legend_plotAW, ncol = 2, rel_widths = c(3, 4))  # Adjust rel_width for legend plot if needed
 
 ```
-OK! Now I got my plot to look nice with two legends! 
-Perhaps I should try to do the same analysis only with 2 or 3 clusters (See elbow chart)?
+OK! Now I got my plot to look nice with two legends and the range of my clusters! 
 
-PRELIM interpretation:
+#PRELIM interpretation:
+
+OBS: This interpretation was made with 2 clusters (as is the optimal amount of clusters for "actual width")
+
+- Cluster 1 is between 28 - 97.6 cm
+- Cluster 2 is between 4.8 - 27.6 cm
+- All my vessel types have cluster 2
+- Vessel types 9, 13, and 14 does NOT have cluster 1
+- The two centroids are centered around vessel type 5 (closed vessels). Is this because it contains the most data points, or is it because it is the vessel type that is best represented in both clusters?
+- Vessel type 5 (closed vessels) has the largest width (surprisingly)
+- Vessel type 9 (Vertical vertical-oval vessels) has the smallest width (These are often the "cup"-category also!)
+- Vessels 1-5, 7, 9, 11, 13, 14, and 15 is predominant in cluster 2 (small size cluster)
+- Vessels 6 (tightly-closed vessels), 8 (wide-open carinated vessels), and 10 (closed vertical-oval vessels) are predominant in cluster 1 (large size cluster)
+- The vessels that cluster in the large size cluster are the storage vessels (for liquids) (cat. 6), serving or frying vessels (cat. 8), and the large storage jars (cat. 10) -> as suspected!!
+
+ 
+#PRELIM interpretation (OLD01):
+
+OBS: This interpretation was made using 4 clusters!
 
 - Vessel category 5 (closed vessels) is the most numerous and also with a fair spread of all the 4 clusters of vessel width
 - Vessel category 4 (vertical vessels) is the second most numerous also containing all the 4 clusters of width, but not so many from cluster 1
@@ -532,9 +697,13 @@ PRELIM interpretation:
 - Vessel category 15 (Tellem tripods) mainly cluster in the lower cat. 3 as expected
 - Perhaps the centroids do not help me a lot??
 
-NEXT STEPS:
+#NEXT STEPS:
 
-- Make a simple boxplot of how many data points you have for each vessel category
+- Make a cluster analysis of "height"
+- Make a cluster analysis of "orifice diameter"
+- Make a cluster analysis of "square cm2"
+
+- Make a simple boxplot of how many data points you have for each vessel category (DONE)
 - Make a principal component analysis between the "width" and "vessel type" to see whether some types have smaller or larger sizes. Or perhaps try this with the square cm2?
 - Make a principal component analysis of the "orifice" and the vessel type
 - Make a principal component analysis of the height and the vessel type
