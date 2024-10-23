@@ -104,6 +104,8 @@ Cleaning a spreadsheet before loading it into R is an important step to ensure y
 7. Save Your Cleaned Data (done, saved as .xlsx)
   - Save your cleaned spreadsheet in a compatible format (like CSV or Excel) for easy import into R.
   
+8. I REMOVED THE 'SPECIAL' VESSEL TYPE CATEGORY AND REPLACED IT WITH '16a' INSTEAD IN THE 'data_tiral02_trimmed' DATA SET -> it was vessl number V559:    Ignore this data point when calculating vessel types
+  
 #Import excel file into a dataset and clean the dataset
 
 Explanation of the Code:
@@ -709,3 +711,286 @@ OBS: This interpretation was made using 4 clusters!
 - Make a principal component analysis of the height and the vessel type
 
 - Prepare the "date" category in your excel sheet. Make all the dates numeric!
+
+# Making a cluster analysis of 'orifice diameter', 'width', and 'height'
+
+(chatgpt): For cluster analysis on your archaeological ceramics, I would suggest focusing on all three size variables you mentioned: orifice diameter, total width, and total height. These data points will give you a well-rounded representation of vessel size. Using all three variables for clustering will allow you to identify patterns based on the overall size and shape of the vessels, which could correspond to functional or stylistic categories.
+
+So, your key variables for clustering would be:
+
+- Orifice diameter
+- Total width
+- Total height
+
+You can standardize these variables if they are on different scales before running the cluster analysis to ensure fair comparison.
+
+It performs hierarchical and k-means clustering using your size measurements.
+
+# Cluster analysis of 'actual width' and 'orifice diameter'
+
+First, I will make an elbow plot of 'actual width' and 'orifice diameter' to determine the optimal number of clusters
+
+```{r, echo=TRUE}
+
+# Install and load necessary libraries
+# install.packages("readxl")    # For reading Excel files
+# install.packages("dplyr")
+# install.packages("ggplot2")
+# install.packages("factoextra") # For visualizing clusters
+# install.packages("cluster")
+
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(factoextra)
+library(cluster)
+
+# Load your dataset from an Excel file
+# Replace 'your_file.xlsx' with the actual path to your file
+ceramics_data <- read_excel("analysis/data/raw_data/data_trial02_trimmed.xlsx")
+
+# Ensure your Excel file has columns: actual_diameter, actual_width, actual_height
+# Check the first few rows of your data
+#head(ceramics_data)
+
+# Extract numeric part of type_category (e.g., "1a" becomes "1")
+ceramics_data_typesplit <- ceramics_data %>%
+  mutate(numeric_category = as.numeric(gsub("[^0-9]", "", `type_category`)))
+
+# Select the relevant columns for clustering
+ceramics_subset <- ceramics_data_typesplit %>%
+  select(actual_diameter, actual_width, actual_height, numeric_category) %>%
+  na.omit()  # Remove rows with missing values
+
+# Standardize the data (important when variables have different units)
+ceramics_scaled <- scale(ceramics_subset)
+```
+
+#Elbow plot of 'actual width' and 'orifice diameter'
+
+The plot determines the optimal amount of clusters. To automatically determine the optimal number of clusters using the elbow method, you can use a combination of the elbow plot and the "Kneedle" algorithm, which can help identify the point where the slope of the WSS decreases sharply. However, R does not have a built-in function for this, but we can implement a simple method to find it.
+
+Automatic Optimal 
+
+- k Calculation: The code uses the second derivative of the WSS to identify the optimal number of clusters automatically.
+- Elbow Plot with Dashed Line: The elbow plot includes a dashed line indicating the optimal k value.
+- Dendrogram: Hierarchical clustering is performed, and the dendrogram is plotted, showing the cut for the optimal number of clusters.
+
+Here's the complete R code that calculates the WSS for different values of k, plots the elbow plot, and automatically determines the optimal number of clusters based on the change in WSS:
+
+```{r, echo=TRUE}
+# 1. Elbow Plot to Determine Optimal Number of Clusters
+
+# Set a range for k
+wss <- numeric(10)  # Pre-allocate a vector for WSS values
+
+for (k in 1:10) {
+  kmeans_result <- kmeans(ceramics_scaled, centers = k)
+  wss[k] <- kmeans_result$tot.withinss  # Store the WSS for each k
+}
+
+# Calculate the rate of change in WSS to find the elbow point
+delta_wss <- diff(wss)  # Change in WSS
+delta2_wss <- diff(delta_wss)  # Second derivative to find the elbow
+
+# Find the optimal number of clusters where the second derivative is maximum
+optimal_k <- which.max(delta2_wss) + 2  # Adding 2 because diff reduces the length by 1
+
+# Create the elbow plot
+elbow_plot <- ggplot(data.frame(k = 1:10, WSS = wss), aes(x = k, y = WSS)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = wss[optimal_k], linetype = "dashed", color = "red") +  # Add red dashed line
+  labs(title = "Elbow Plot for K-means Clustering of 'actual width' and 'orifice diameter'",
+       x = "Number of Clusters (k)",
+       y = "Total Within-Cluster Sum of Squares (WSS)") +
+  theme_minimal() +
+  annotate("text", x = optimal_k + 0.5, y = wss[optimal_k], 
+           label = paste("Optimal k =", optimal_k), color = "red", vjust = -0.5)
+
+# Print the elbow plot
+print(elbow_plot)
+```
+So, my optimal number of clusters for 'actual width' and 'orifice diameter' is 3!
+
+# Hierarchial clustering of 'actual width' and 'orifice diameter'
+
+```{r, echo=TRUE}
+# 1. Hierarchical Clustering
+
+# Compute the distance matrix
+dist_matrix <- dist(ceramics_scaled, method = "euclidean")
+
+# Perform hierarchical clustering
+hc <- hclust(dist_matrix, method = "ward.D2")
+
+# Plot the dendrogram   (RUN TOGETHER WITH CHUNK BELOW!!!)
+plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "", sub = "", cex = 0.6)
+
+# Choose the number of clusters (k) by cutting the dendrogram
+k <- 3  # You can experiment with different values for k (Elbow plot = 3)
+rect.hclust(hc, k = k, border = 2:4)  # Visualize the cut on the dendrogram
+```
+PRELIM interpretation:
+
+I need to make the data points clearer in the bottom row!
+
+I think it means that I have 3 clusters that start clustering around 20 cm in height? Further interpretation will be conducted when I have cleaned the bottom row
+
+I do not understand what happens when I normalize the data, but I see that my clusters change when I do not do it. My data looks quite strange when I normalize it, so I'm not sure what is the best??
+
+# K-means clustering
+
+```{r, echo=TRUE}
+
+# 2. K-means Clustering
+
+# Perform k-means clustering with the chosen number of clusters
+set.seed(123)  # For reproducibility
+kmeans_result <- kmeans(ceramics_scaled, centers = k)
+
+# Add the cluster results to the original data
+ceramics_data_typesplit$cluster <- kmeans_result$cluster
+
+# Visualize the clusters using the first two dimensions
+fviz_cluster(kmeans_result, data = ceramics_scaled, geom = "point", ellipse = TRUE) +
+  labs(title = "K-means Clustering of Ceramics")
+```
+PRELIM interpretation:
+
+1- My Dim1 (x-axis) conmtrols 83.8% of the clustering variable, and my Dim2 controls 14.9% of the clustering variable. 
+2- I have only changed V559 to "16a" and now my dataset looks completely different -> Dim1(62.9%) Dim2(27%) <- I think that my data should not change so much just because I canged one entry in the spreadsheet??
+
+I will continue with these changes for now..
+
+```{r, echo=TRUE}
+library(cowplot)
+
+# 3. Visualize the clusters with clusters as shapes and vessel types as colors
+main_plot <- ggplot(ceramics_data_typesplit, aes(x = actual_diameter, y = actual_width, shape = factor(cluster), color = factor(numeric_category))) +
+  geom_point(size = 3) +
+  labs(title = "Cluster Analysis of Vessel Sizes",
+       x = "Orifice Diameter (cm)",
+       y = "Total Width (cm)",
+       shape = "Cluster",     # Clusters represented by shapes
+       color = "Vessel Type") +  # Vessel types represented by colors
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    legend.box = "horizontal"  # Arrange the legends horizontally
+  )
+
+# Extract the legends for clusters and vessel types
+cluster_legend <- cowplot::get_legend(main_plot + guides(color = "none"))  # Remove vessel type legend
+vessel_type_legend <- cowplot::get_legend(main_plot + guides(shape = "none"))  # Remove cluster legend
+
+# Combine the main plot and both legends side by side
+final_plot <- cowplot::plot_grid(main_plot + theme(legend.position = "none"), 
+                                 cowplot::plot_grid(cluster_legend, vessel_type_legend, ncol = 1), 
+                                 rel_widths = c(4, 1))  # Adjust relative widths
+
+# Display the final plot
+print(final_plot)
+```
+PRELIM interpretation:
+
+This looks much better than my previous cluster analysis! 
+
+
+# Cluster analysis of 'width' and 'height'
+
+```{r, echo=TRUE}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(factoextra)
+library(cluster)
+
+# Load your dataset from an Excel file
+ceramics_data <- read_excel("analysis/data/raw_data/data_trial02_trimmed.xlsx")
+
+# Ensure your Excel file has columns: actual_diameter, actual_width
+# Check the first few rows of your data
+head(ceramics_data)
+
+# Select the relevant columns for clustering (Diameter and Width)
+ceramics_subset <- ceramics_data %>%
+  select(actual_diameter, actual_width) %>%
+  na.omit()  # Remove rows with missing values
+
+# Standardize the data (important when variables have different units)
+ceramics_scaled <- scale(ceramics_subset)
+
+# 1. Elbow Plot to Determine Optimal Number of Clusters
+
+# Set a range for k
+wss <- numeric(10)  # Preallocate a vector for WSS values
+
+for (k in 1:10) {
+  kmeans_result <- kmeans(ceramics_scaled, centers = k)
+  wss[k] <- kmeans_result$tot.withinss  # Store the WSS for each k
+}
+
+# Calculate the rate of change in WSS to find the elbow point
+delta_wss <- diff(wss)  # Change in WSS
+delta2_wss <- diff(delta_wss)  # Second derivative to find the elbow
+
+# Find the optimal number of clusters where the second derivative is maximum
+optimal_k <- which.max(delta2_wss) + 2  # Adding 2 because diff reduces the length by 1
+
+# Create the elbow plot
+elbow_plot <- ggplot(data.frame(k = 1:10, WSS = wss), aes(x = k, y = WSS)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = wss[optimal_k], linetype = "dashed", color = "red") +  # Add red dashed line
+  labs(title = "Elbow Plot for K-means Clustering",
+       x = "Number of Clusters (k)",
+       y = "Total Within-Cluster Sum of Squares (WSS)") +
+  theme_minimal() +
+  annotate("text", x = optimal_k + 0.5, y = wss[optimal_k], 
+           label = paste("Optimal k =", optimal_k), color = "red", vjust = -0.5)
+
+# Print the elbow plot
+print(elbow_plot)
+
+# 2. Hierarchical Clustering
+
+# Compute the distance matrix
+dist_matrix <- dist(ceramics_scaled, method = "euclidean")
+
+# Perform hierarchical clustering
+hc <- hclust(dist_matrix, method = "ward.D2")
+
+# Plot the dendrogram
+plot(hc, main = "Hierarchical Clustering Dendrogram", xlab = "", sub = "", cex = 0.6)
+
+# Choose the number of clusters (k) by cutting the dendrogram
+rect.hclust(hc, k = optimal_k, border = 2:4)  # Visualize the cut on the dendrogram
+
+# 3. K-means Clustering
+
+# Perform k-means clustering with the determined number of clusters
+set.seed(123)  # For reproducibility
+kmeans_result <- kmeans(ceramics_scaled, centers = optimal_k)
+
+# Add the cluster results to the original data
+ceramics_data$cluster <- kmeans_result$cluster
+
+# Visualize the clusters using the first two dimensions
+fviz_cluster(kmeans_result, data = ceramics_scaled, geom = "point", ellipse = TRUE) +
+  labs(title = "K-means Clustering of Ceramics")
+
+# Visualize the clusters by diameter and width variables
+ggplot(ceramics_data, aes(x = actual_diameter, y = actual_width, color = factor(cluster))) +
+  geom_point(size = 3) +
+  labs(title = "Cluster Analysis of Vessel Sizes",
+       x = "Orifice Diameter (cm)",
+       y = "Total Width (cm)",
+       color = "Cluster") +
+  theme_minimal()
+
+# Optional: Output the cluster result
+table(ceramics_data$cluster)
+
+
+```
