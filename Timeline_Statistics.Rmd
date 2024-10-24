@@ -1,5 +1,5 @@
 ---
-title: "INDPotteryChronology_Statistics"
+title: "INDPotteryChronology_Statistics on vesssel size clustering"
 author: "Soren Pedersen"
 date: "20/09/2024"
 output: html_document
@@ -195,6 +195,16 @@ data_trial02_typesplitAW <- data_trial02_trimmedAW %>%
 ```
 
 You have now created a dataset "data_trial02_typesplitAW" with an extra column named "numeric_category" where the "type_category" has deleted the letter value in the type (i.e. "1a" becomes "1")
+
+### Genral thoughts ###
+
+Just must make more descriptional statistics in are separate .rmd. Include the 'count of data points' below in a separate Rmd, and also include simple statistics as:
+
+- which rim type is most popular?
+- which base type is most popular?
+- which form does most often have what which type of rim and base?
+- Is there a popular vessel type for sites that are more influential? -> divide the sites into hubs and describe which are more influential than others!
+- Which vessel type is most dominant pr. site?
 
 # Count how many data points there are under each 'vessel type' category
 
@@ -994,3 +1004,8 @@ table(ceramics_data$cluster)
 
 
 ```
+
+# ToDo:
+
+- You must make the cluster analysis on the individual pottery types! So, how does the sizes cluster within each vessel type category???
+- then you can answer if one vessel type has more size categories than others!
