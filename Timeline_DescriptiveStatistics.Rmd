@@ -246,7 +246,7 @@ library(cowplot)
 vessel_counts <- data.frame(table(ceramics_subset$numeric_category))
 colnames(vessel_counts) <- c("Vessel_Type", "Count")
 
-# Create the boxplot with adjusted width
+# Create the boxplot of 'Data points per vessel type'
 boxplot_plot <- ggplot(vessel_counts, aes(x = as.factor(Vessel_Type), y = Count)) +
   geom_boxplot(fill = "lightblue", outlier.color = "red") +
   labs(title = "Boxplot of Data Points per Vessel Type",
@@ -258,7 +258,7 @@ boxplot_plot <- ggplot(vessel_counts, aes(x = as.factor(Vessel_Type), y = Count)
     plot.margin = margin(10, 10, 10, 10)  # Adjust plot margins if needed
   )
 
-# Legend table for vessel types
+# Legend table for boxplot of 'Data points per vessel type'
 legend_table <- data.frame(
   Vessel_Type = 1:16,
   Description = c("Wide-open vessels", "Open vessels", "Closed horizontal-oval vessels", 
@@ -283,6 +283,8 @@ cowplot::plot_grid(boxplot_plot, legend_plot, ncol = 2, rel_widths = c(3, 3))  #
 ```
 SO, the plot is not perfect (missing right margin), but I can adjust it later.
 
+NIck: You need a barplot here, change geom_boxplot() to geom_bar()
+
 # PRELIM interpretation:
 
 - Vessel category 5 (closed vessels) has by far the most data points -> interesting because it also has the most multi purpose function!!!
@@ -302,6 +304,8 @@ SO, the plot is not perfect (missing right margin), but I can adjust it later.
 
 - There is actually a correlation between how "multi-purpose" a vessel is and the amount of data points I have collected. The "closed vessels", "vertical vessels" and the "open vessels" are the three categories you can describe as the most multi-purpose!
 
+-NICK/me: this also points to the conservationism of the pottery, in where the oldest froms are also the most numerous. They do not change the pottery types so often!
+
 # Boxplot of how many datapoint I have per rim category
 
 ```{r, echo=TRUE}
@@ -315,6 +319,15 @@ ggplot(ceramics_data_typesplit, aes(x = rim_category)) +
   geom_bar() +
   labs(x = "Rim Category", y = "Count", title = "Counts per Rim Category") +
   theme_minimal()
+
+#NIck: drop the NAs before plotting
+#
+#ceramics_data_typesplit %>% 
+#drop_na(rim_category) %>% 
+#ggplot(aes(x = rim_category)) +
+#  geom_bar() +
+#  labs(x = "Rim Category", y = "Count", title = "Counts per Rim Category") +
+#  theme_minimal()
 
 ```
 So, this looks good! The NA category is from Karkarichinkat where the rim types were not presented. 
@@ -347,10 +360,12 @@ OBS: There is one type-o where I have some "TC" groups that should be "Tc" -> ch
 
 # Load necessary package
 library(ggplot2)
+library(tidyr)
 
 # Boxplot of 'Counts per Base Category' 
-
-ggplot(ceramics_data_typesplit, aes(x = base_category)) +
+ceramics_data_typesplit %>% 
+  drop_na(base_category) %>% 
+ggplot(aes(x = base_category)) +
   geom_bar() +
   labs(x = "Base Category", y = "Count", title = "Counts per Base Category") +
   theme_minimal()
@@ -370,6 +385,7 @@ So, this looks nice !
 
 #ToDo:
 - I think that I need to register whether the bases are rounded also. With this, I can see which form often has a round base and how the round bases correlate with the rims
+- Make a separate category for the rounded bases
 
 
 ### Exploring which "rim-category" is most often represented per "vessel_type" ###

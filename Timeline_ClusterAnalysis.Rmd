@@ -86,9 +86,11 @@ You can standardize these variables if they are on different scales before runni
 
 It performs hierarchical and k-means clustering using your size measurements.
 
+NICK: it does not make sense to make a cluster analysis of the 'width' and 'height' because you need more datapoints to do a cluster analysis. Make a cluster analysis of 'width', 'height', and the 'orifice diameter'
+
 # Cluster analysis of 'actual width' and 'orifice diameter'
 
-STEP 1: Extract the three numerical categories into one spreadsheet and split the types so 1a becaomes 1
+STEP 1: Extract the three numerical categories into one spreadsheet and split the types so 1a becomes 1
 
 ```{r, echo=TRUE}
 
@@ -269,19 +271,19 @@ library(factoextra)
 library(cluster)
 
 # Load your dataset from an Excel file
-ceramics_data <- read_excel("analysis/data/raw_data/data_trial02_trimmed.xlsx")
+#ceramics_data <- read_excel("analysis/data/raw_data/data_trial02_trimmed.xlsx")
 
 # Ensure your Excel file has columns: actual_diameter, actual_width
 # Check the first few rows of your data
-head(ceramics_data)
+#head(ceramics_data)
 
 # Select the relevant columns for clustering (Diameter and Width)
-ceramics_subset <- ceramics_data %>%
-  select(actual_diameter, actual_width) %>%
-  na.omit()  # Remove rows with missing values
+#ceramics_subset <- ceramics_data %>%
+  #select(actual_diameter, actual_width) %>%
+  #na.omit()  # Remove rows with missing values
 
 # Standardize the data (important when variables have different units)
-ceramics_scaled <- scale(ceramics_subset)
+#ceramics_scaled <- scale(ceramics_subset)
 
 # 1. Elbow Plot to Determine Optimal Number of Clusters
 
