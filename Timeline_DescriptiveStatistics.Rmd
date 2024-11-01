@@ -183,7 +183,7 @@ Your dataset is now saved as "data_trial02_trimmed.xlsx" in the raw_data folder
 
 ### General thoughts ###
 
-Just must make more descriptional statistics in are separate .rmd. Include the 'count of data points' below in a separate Rmd, and also include simple statistics as:
+Just must make more descriptive statistics in are separate .rmd. Include the 'count of data points' below in a separate Rmd, and also include simple statistics as:
 
 - which rim type is most popular?
 - which base type is most popular?
