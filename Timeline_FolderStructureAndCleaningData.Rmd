@@ -1,0 +1,305 @@
+---
+title: "Timeline_FolderStructureAndCleaningData"
+author: "Soren Pedersen"
+date: "2024-11-04"
+output: html_document
+---
+
+###This document makes the Ben Marwick folder structure and cleans my data
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+------------------------------------------
+### STEP 0: Install and load libraries ###
+------------------------------------------
+
+```{r, echo=TRUE}
+# Install packages:
+#install.packages("renv")
+#install.packages("devtools")
+#install.packages("rrtools")
+#install.packages("remotes")
+#install.packages("readxl")
+#install.packages("dplyr")
+#install.packages("stringr")
+#install.packages("tidyr")
+#install.packages("openxlsx")
+
+#Load libraries:
+library(renv)
+library(devtools)
+library(rrtools)
+library(remotes)
+library(readxl)   # For reading Excel files
+library(dplyr)    # For data manipulation
+library(stringr)  # For string operations
+library(tidyr)    # For missing values operation
+library(openxlsx) # For writing Excel files
+```
+
+OBS: Folder structure is created -> Skip to data cleaning!
+
+------------------------
+### Folder structure ###
+------------------------
+
+SKIP THIS STEP
+
+#Set up folder sturcture 1: Make Git repository, install Ben Marwick folder structure
+
+- Create a Git-managed directory linked to an online repository:
+
+It is possible to use rrtools without Git, but usually we want our research compendium to be managed by the version control software Git. The free online book Happy Git With R has details on how to do this. In brief, there are two methods to get started:
+
+Start on Github, Gitlab, or a similar web service, and create an empty repository called 'pkgname' (you should use a different name, please follow the rules below) on that service. Then clone that repository to have a local empty directory on your computer, called pkgname, that is linked to this remote repository. Please see our wiki for a step-by-step walk-though of this method, illustrated with screenshots.
+
+Your 'pkgname' must follow some rules for everything to work, it must:
+… contain only ASCII letters, numbers, and ‘.’
+… have at least two characters
+… start with a letter (not a number)
+… not end with ‘.’
+
+-----------------------------------------
+'pkgname'on GitHub: PotteryChronology_IND
+-----------------------------------------
+
+- Install Ben Marwick folder structure (rrtools) from GitHub:
+
+rrtools provides a template for doing scholarly writing in a literate programming environment using Quarto, an open-source scientific and technical publishing system. It also allows for isolation of your computational environment using Docker, package versioning using renv, and continuous integration using GitHub Actions. It makes a convenient starting point for writing a journal article or report.
+
+The functions in rrtools allow you to use R to easily follow the best practices outlined in several major scholarly publications on reproducible research. In addition to those cited above, Wilson et al. (2017), Piccolo & Frampton (2016), Stodden & Miguez (2014) and rOpenSci (2017) are important sources that have influenced our approach to this package.
+
+```{r, echo=TRUE}
+#remotes::install_github("benmarwick/rrtools")
+
+#NOTE: Install ALL updates
+
+#devtools::install_github("benmarwick/rrtools")
+
+-----------------------------------------------
+  
+#Create a new .Rproj -> very important not to have spaces, underscores or numbers in the folder name
+
+#Example: rrtools::use_compendium("C:/your/path/name/here/YourNewRProjectNameHere")
+
+```
+
+#Set up folder structure 2: rrtools::use_compendium("PotteryChronology_IND")
+
+if you started with a new project on GitHub first, run 'rrtools::use_compendium()'
+
+```{r, echo=TRUE}
+# rrtools::use_compendium("C:/Users/Pedersen/Documents/R/PotteryChronologyIND")
+```
+
+--------------------------------------------------------------------
+Created a project (PotteryChronologyIND) named PotteryChronology_IND
+--------------------------------------------------------------------
+
+this uses usethis::create_package() to create a basic R package in the pkgname directory, and then, if you’re using RStudio, opens the project. If you’re not using RStudio, it sets the working directory to the pkgname directory.
+
+Next we need to:
+
+edit the DESCRIPTION file (located in your pkgname directory) to include accurate metadata, e.g. your ORCID and email address
+
+[NOT done] periodically update the Imports: section of the DESCRIPTION file with the names of packages used in the code we write in the qmd document(s) by running rrtools::add_dependencies_to_description()
+
+#Set up folder structure 3: Set up license 'sethis::use_mit_license()'
+
+this adds a reference to the MIT license in the DESCRIPTION file and generates a LICENSE file listing the name provided as the copyright holder
+
+to use a different license, replace this line with any of the licenses mentioned here: ?usethis::use_mit_license()
+
+```{r, echo=TRUE}
+# usethis::use_mit_license(copyright_holder = "Soren Feldborg")
+```
+
+#Set up folder structure 4: Generate readme 'rrtools::use_readme_qmd()'
+
+this generates README.qmd and renders it to README.md, ready to display on GitHub. It contains:
+
+1) a template citation to show others how to cite your project. Edit this to include the correct title and DOI.
+
+2) license information for the text, figures, code and data in your compendium
+this also adds two other markdown files: a code of conduct for users CONDUCT.md, and basic instructions for people who want to contribute to your project CONTRIBUTING.md, including for first-timers to git and GitHub.
+
+this adds a .binder/Dockerfile that makes Binder work, if your compendium is hosted online. Currently configured for GitHub, but easily adapted for elsewhere (e.g. Zenodo, Figshare, Dataverse, etc.)
+
+render this document after each change to refresh README.md, which is the file that GitHub displays on the repository home page
+
+```{r, echo=TRUE}
+# rrtools::use_readme_qmd()
+```
+
+#Set up folder structure 5: Make analysis folder 'use_analysis()'
+
+This is to create folder "analysis" with sub-folder structure
+
+this function has three location = options: top_level to create a top-level analysis/ directory, inst to create an inst/ directory (so that all the sub-directories are available after the package is installed), and vignettes to create a vignettes/ directory (and automatically update the DESCRIPTION). The default is a top-level analysis/.
+
+for each option, the contents of the sub-directories are the same, with the following (using the default analysis/ for example):
+
+```{r, echo=TRUE}
+#create folder -> creates the analysis folder and the structure
+#use_analysis()
+```
+
+Do this below (pops-up when you execute use_analysis())
+
+Next, you need to [ADD this when you are analysing the real data]:  ↓ ↓ ↓ ↓ 
+
+* Write your article/report/thesis, start at the paper.Rmd file
+* Add the citation style library file (csl) to replace the default provided here, see https://github.com/citation-style-language/
+* Add bibliographic details of cited items to the 'references.bib' file
+* For adding captions & cross-referencing in an Rmd, see https://bookdown.org/yihui/bookdown/
+* For adding citations & reference lists in an Rmd, see http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html
+
+#Set up folder structure 6: Make dockerfile 'rrtools::use_dockerfile()'
+
+this creates a basic Dockerfile using rocker/verse as the base image
+
+this also creates creates a minimal .yml configuration file to activate continuous integration using GitHub Actions. This will attempt to render your qmd document, in a Docker container specified by your Dockerfile, each time you push to GitHub. You can view the results of each attempt at the 'actions' page for your compendium on github.com, e.g. https://github.com/benmarwick/rrtools/actions
+
+```{r, echo=TRUE}
+#rrtools::use_dockerfile()
+```
+
+#Set up folder structure 7: Make private library 'renv::init()'
+
+this initates tracking of the packages you use in your project using renv. renv will discover the R packages used in your project, and install those packages into a private project library
+
+```{r, echo=TRUE}
+#renv::init()
+```
+
+renv: Project Environments for R
+
+renv will write to files within the active project folder, including:
+
+  - A folder 'renv' in the project directory, and
+  - A lockfile called 'renv.lock' in the project directory.
+
+In particular, projects using renv will normally use a private, per-project
+R library, in which new packages will be installed. This project library is
+isolated from other R libraries on your system.
+
+In addition, renv will update files within your project directory, including:
+
+  - .gitignore
+  - .Rbuildignore
+  - .Rprofile
+
+Finally, renv maintains a local cache of data on the filesystem, located at:
+
+  - "C:/Users/Pedersen/AppData/Local/R/cache/R/renv"
+
+This path can be customized: please see the documentation in `?renv::paths`.
+
+Please read the introduction vignette with `vignette("renv")` for more information.
+You can browse the package documentation online at https://rstudio.github.io/renv/.
+
+#References and related reading for Ben Marwick:
+
+Kitzes, J., Turek, D., & Deniz, F. (Eds.). (2017). The Practice of Reproducible Research: Case Studies and Lessons from the Data-Intensive Sciences. Oakland, CA: University of California Press. https://www.practicereproducibleresearch.org
+
+Marwick, B. (2017). Computational reproducibility in archaeological research: Basic principles and a case study of their implementation. Journal of Archaeological Method and Theory, 24(2), 424-450. https://doi.org/10.1007/s10816-015-9272-9
+
+Marwick, B., Boettiger, C., & Mullen, L. (2018). Packaging data analytical work reproducibly using R (and friends). The American Statistician 72(1), 80-88. https://doi.org/10.1080/00031305.2017.1375986
+
+Piccolo, S. R. and M. B. Frampton (2016). “Tools and techniques for computational reproducibility.” GigaScience 5(1): 30. https://gigascience.biomedcentral.com/articles/10.1186/s13742-016-0135-4
+
+rOpenSci community (2017b). rrrpkg: Use of an R package to facilitate reproducible research. Online at https://github.com/ropensci/rrrpkg
+
+Schmidt, S.C. and Marwick, B., 2020. Tool-Driven Revolutions in Archaeological Science. Journal of Computer Applications in Archaeology, 3(1), pp.18–32. DOI: http://doi.org/10.5334/jcaa.29
+
+Stodden, V. & Miguez, S., (2014). Best Practices for Computational Science: Software Infrastructure and Environments for Reproducible and Extensible Research. Journal of Open Research Software. 2(1), p.e21. DOI: http://doi.org/10.5334/jors.ay
+
+Wickham, H. (2017) Research compendia. Note prepared for the 2017 rOpenSci Unconf. https://docs.google.com/document/d/1LzZKS44y4OEJa4Azg5reGToNAZL0e0HSUwxamNY7E-Y/edit#
+
+Wilson G, Bryan J, Cranston K, Kitzes J, Nederbragt L, et al. (2017). Good enough practices in scientific computing. PLOS Computational Biology 13(6): e1005510. https://doi.org/10.1371/journal.pcbi.1005510
+
+---------------------
+### Data cleaning ###
+---------------------
+
+# STEP 0: Clean spreadsheet before loading into R
+
+Cleaning a spreadsheet before loading it into R is an important step to ensure your data analysis is accurate and efficient. Here are some key steps you can follow to clean your spreadsheet:
+
+1. Remove Unnecessary Data (done in excel sheet and r)
+  - Delete Extra Rows/Columns: Remove any rows or columns that are not relevant to your analysis, such as empty rows or columns, headers that repeat, or any irrelevant metadata.
+  - Trim Whitespace: Remove any leading or trailing spaces in your cells.
+
+2. Standardize Formats (done in excel sheet)
+  - Date Formats: Ensure all date entries are in a consistent format (e.g., YYYY-MM-DD).
+  - Numeric Formats: Make sure numeric columns do not have any non-numeric characters (like commas or dollar signs).
+  - Text Consistency: Standardize text entries (e.g., capitalization, spelling, etc.).
+
+3. Handle Missing Values (done in r)
+  - Identify Missing Values: Use functions to highlight or mark missing values.
+  - Decide on a Strategy: Decide whether to remove rows with missing values, fill them in with a specific value (like the mean or median), or use other imputation techniques.
+
+4. Correct Data Entry Errors (not done)
+  - Identify Duplicates: Check for and remove duplicate rows if necessary.
+  - Fix Inconsistencies: Look for typos or inconsistencies in categorical data (e.g., “male” vs. “Male”).
+
+5. Transform Data if Necessary (not done)
+  - Reformat Data Types: Ensure that each column has the correct data type (e.g., factors for categorical data, numeric for quantitative data).
+  - Create New Columns: If necessary, create new columns for calculations or derived values.
+
+6. Document Changes (done, see above parenthesis)
+  - Keep a record of the changes made to your spreadsheet for transparency and reproducibility.
+
+7. Save Your Cleaned Data (done, saved as .xlsx)
+  - Save your cleaned spreadsheet in a compatible format (like CSV or Excel) for easy import into R.
+  
+8. I REMOVED THE 'SPECIAL' VESSEL TYPE CATEGORY AND REPLACED IT WITH '16a' INSTEAD IN THE 'data_tiral02_trimmed' DATA SET -> it was vessl number V559:    Ignore this data point when calculating vessel types
+  
+# STEP 1: Import excel file into a dataset and clean the dataset
+
+Explanation of the Code:
+
+- Loading Libraries: 
+    Ensure that you have the required libraries installed and loaded.
+
+- Reading Data: 
+    The read_excel function is used to read the data from the Excel file.
+
+- Data cleaning:
+    Replace missing values with NAs
+    Trim whitespaces in the excel sheet
+
+- Saving Cleaned Data: 
+    Optionally, save the cleaned dataset back to an Excel file using write.xlsx() from the openxlsx package (you'll need to install that package as well).
+
+```{r, echo=TRUE}
+# Load excel sheet into a dataset, trim whitespaces and replace missing rows with NAs
+
+# Load the Excel file into a dataset
+data_trial02 <- read_excel("analysis/data/raw_data/timeline_data_trial02.xlsx")
+
+# View the initial structure of the data
+#str(data_trial02)
+
+# Handle missing values
+# Here, we're filling missing values with NA (default behavior). You can also replace them with specific values or remove rows.
+
+data_trial02 <- data_trial02 %>%
+  mutate(across(everything(), ~ replace_na(., NA)))  # Fill with NA (optional)
+
+# Trim whitespaces from all character columns
+data_trial02_trimmed <- data_trial02 %>%
+  mutate(across(where(is.character), ~ str_trim(.)))  # Trim whitespace
+
+# View the cleaned data
+#head(data_trial02_trimmed)
+
+# Step 5: Save the cleaned data to a new Excel file
+write.xlsx(data_trial02_trimmed, "analysis/data/raw_data/data_trial02_trimmed.xlsx")
+```
+
+-------------------------------------------------------------------------------
+Your dataset is now saved as "data_trial02_trimmed.xlsx" in the raw_data folder
+-------------------------------------------------------------------------------

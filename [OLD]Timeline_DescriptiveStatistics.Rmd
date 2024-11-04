@@ -1,57 +1,19 @@
 ---
-title: "Timeline_DescriptiveStatistics"
+title: "INDPotteryChronology_Statistics on vesssel size clustering"
 author: "Soren Pedersen"
-date: "2024-11-04"
+date: "20/09/2024"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+###This document explores the standard descriptive statistics of the vessel forms
 
-## R Markdown
+To better understand my data I have made a document to explore the data.
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+- Make a simple boxplot of how many data points you have for each vessel category (DONE)
+- Make a boxplot of rim categories
+- Make a boxplot of base categories
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. 
-
---------------------------------------------------------------------------------
-
-### IDEAS FOR THIS DOCUMENT ###
-
-To better understand my data I have made a document to explore the data:
-
-- which rim type is most popular overall?
-- which rim type is most popular per site?
-- which rim type is most popular through time?
-
-- which base type is most popular overall?
-- which base type is most popular per site?
-- which base type is most popular through time?
-
-- Which vessel type is most dominant overall?
-- Which vessel type is most dominant pr. site?
-- Which vessel type is most dominant through time?
-
-- What size category is dominant overall?
-- What size category is dominant per site?
-- What size category is dominant through time?
-
-- which form does most often have what type of rim?
-- which form does most often have what type of base?
-
-- which form does most often have decorations?
-- which form has the fewest decorations?
-
-- Is there a popular vessel type for sites that are more influential? -> divide the sites into hubs and describe which are more influential than others!
-
-# DONE
-
-- Make a boxplot of how many data points you have for each vessel category (DONE)
-- Make a boxplot of how many data points you have for each rim category (DONE)
-- Make a boxplot of how many data points you have for each base category (DONE)
-
-- Make a mosaicplot of which rim category are most used compared to the form (DONE)
+- Make a boxplot of which rim category are most used compared to the form
 
 #ToDo!!!
 
@@ -59,78 +21,207 @@ To better understand my data I have made a document to explore the data:
 - Make a principal component analysis of the "orifice" and the vessel type
 - Make a principal component analysis of the height and the vessel type
 
------------------------------------------
-### STEP 0: Install and load packages ###
------------------------------------------
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Set up folder sturcture
 
 ```{r, echo=TRUE}
 
-# Install necessary packages:
+#install devtools
 
+#install.packages("devtools")
+library(devtools)
+
+#install.packages("rrtools")
+library(rrtools)
+
+#You need the "remotes" package to install the "rrtools:BenMarwick" package 
+
+#install.packages("remotes")
+library(remotes)
+
+remotes::install_github("benmarwick/rrtools")
+
+#NOTE: I did install ALL updates
+
+#devtools::install_github("benmarwick/rrtools")
+---------------------------------------------------------------------------------------
+  
+#Create a new .Rproj -> very important not to have spaces, underscores or numbers in the folder name
+  
+#OBS: do not make a new .Rproj if you already have a project running -> skip to next step
+
+#rrtools::use_compendium("C:/Users/Pedersen/Documents/R/PotteryChronologyIND")
+
+#rrtools::use_compendium("C:/Users/Pedersen/Documents/R/RSeminar")
+
+
+#Example: rrtools::use_compendium("C:/your/path/name/here/YourNewRProjectNameHere")
+
+```
+
+#Set up folder structure
+
+This is to create folder "analysis" with sub-folder structure -> VERY USEFUL
+
+The structure is made by Ben Marwick and is designated for archaeological writing and structure
+
+```{r, echo=TRUE}
+#Package that includes folder structure
+library(rrtools)
+
+#create folder -> creates the analysis folder and the structure
+use_analysis()
+
+#Do this below (pops-up when you execute use_analysis())
+
+#Next, you need to:  ↓ ↓ ↓ ↓ 
+#* Write your article/report/thesis, start at the paper.Rmd file
+#* Add the citation style library file (csl) to replace the default provided here, see https://github.com/citation-style-language/
+#* Add bibliographic details of cited items to the 'references.bib' file
+#* For adding captions & cross-referencing in an Rmd, see https://bookdown.org/yihui/bookdown/
+#* For adding citations & reference lists in an Rmd, see http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html
+```
+
+#Clean spreadsheet before loading into R
+
+Cleaning a spreadsheet before loading it into R is an important step to ensure your data analysis is accurate and efficient. Here are some key steps you can follow to clean your spreadsheet:
+
+1. Remove Unnecessary Data (done in excel sheet and r)
+  - Delete Extra Rows/Columns: Remove any rows or columns that are not relevant to your analysis, such as empty rows or columns, headers that repeat, or any irrelevant metadata.
+  - Trim Whitespace: Remove any leading or trailing spaces in your cells.
+
+2. Standardize Formats (done in excel sheet)
+  - Date Formats: Ensure all date entries are in a consistent format (e.g., YYYY-MM-DD).
+  - Numeric Formats: Make sure numeric columns do not have any non-numeric characters (like commas or dollar signs).
+  - Text Consistency: Standardize text entries (e.g., capitalization, spelling, etc.).
+
+3. Handle Missing Values (done in r)
+  - Identify Missing Values: Use functions to highlight or mark missing values.
+  - Decide on a Strategy: Decide whether to remove rows with missing values, fill them in with a specific value (like the mean or median), or use other imputation techniques.
+
+4. Correct Data Entry Errors (not done)
+  - Identify Duplicates: Check for and remove duplicate rows if necessary.
+  - Fix Inconsistencies: Look for typos or inconsistencies in categorical data (e.g., “male” vs. “Male”).
+
+5. Transform Data if Necessary (not done)
+  - Reformat Data Types: Ensure that each column has the correct data type (e.g., factors for categorical data, numeric for quantitative data).
+  - Create New Columns: If necessary, create new columns for calculations or derived values.
+
+6. Document Changes (done, see above parenthesis)
+  - Keep a record of the changes made to your spreadsheet for transparency and reproducibility.
+
+7. Save Your Cleaned Data (done, saved as .xlsx)
+  - Save your cleaned spreadsheet in a compatible format (like CSV or Excel) for easy import into R.
+  
+8. I REMOVED THE 'SPECIAL' VESSEL TYPE CATEGORY AND REPLACED IT WITH '16a' INSTEAD IN THE 'data_tiral02_trimmed' DATA SET -> it was vessl number V559:    Ignore this data point when calculating vessel types
+  
+#Import excel file into a dataset and clean the dataset
+
+Explanation of the Code:
+
+- Loading Libraries: 
+    Ensure that you have the required libraries installed and loaded.
+
+- Reading Data: 
+    The read_excel function is used to read the data from the Excel file.
+
+- Data cleaning:
+    Replace missing values with NAs
+    Trim whitespaces in the excel sheet
+
+- Saving Cleaned Data: 
+    Optionally, save the cleaned dataset back to an Excel file using write.xlsx() from the openxlsx package (you'll need to install that package as well).
+
+```{r, echo=TRUE}
+# YOU CAN JUMP DIRECTLY TO STEP 1
+
+### Load excel sheet into a dataset, trim whitespaces and replace missing rows with NAs
+
+# Install necessary packages
+#install.packages("readxl")
+#install.packages("dplyr")
+#install.packages("stringr")
+#install.packages("tidyr")
+#install.packages("openxlsx")
+
+# Load necessary packages
+#library(readxl)   # For reading Excel files
+#library(dplyr)    # For data manipulation
+#library(stringr)  # For string operations
+#library(tidyr)    # For missing values operation
+#library(openxlsx) # For writing Excel files
+
+# Step 1: Load the Excel file
+#data_trial02 <- read_excel("analysis/data/raw_data/timeline_data_trial02.xlsx")
+
+# Step 2: View the initial structure of the data
+#str(data_trial02)
+
+# Step 3: Handle missing values
+# Here, we're filling missing values with NA (default behavior)
+# You can also replace them with specific values or remove rows.
+#data_trial02 <- data_trial02 %>%
+  #mutate(across(everything(), ~ replace_na(., NA)))  # Fill with NA (optional)
+
+# Step 4: Trim whitespaces from all character columns
+#data_trial02_trimmed <- data_trial02 %>%
+  #mutate(across(where(is.character), ~ str_trim(.)))  # Trim whitespace
+
+# View the cleaned data
+#head(data_trial02_trimmed)
+
+# Step 5: Save the cleaned data to a new Excel file
+#write.xlsx(data_trial02_trimmed, "analysis/data/raw_data/data_trial02_trimmed.xlsx")
+
+### Your dataset is now saved as "data_trial02_trimmed.xlsx" in the raw_data folder
+```
+Your dataset is now saved as "data_trial02_trimmed.xlsx" in the raw_data folder
+
+### General thoughts ###
+
+Just must make more descriptive statistics in are separate .rmd. Include the 'count of data points' below in a separate Rmd, and also include simple statistics as:
+
+- which rim type is most popular?
+- which base type is most popular?
+- which form does most often have what which type of rim and base?
+- Is there a popular vessel type for sites that are more influential? -> divide the sites into hubs and describe which are more influential than others!
+- Which vessel type is most dominant pr. site?
+
+# Count how many data points there are under each 'vessel type' category
+
+STEP 1: Extract the three numerical categories into one spreadsheet and split the types so 1a becomes 1
+
+```{r, echo=TRUE}
+
+# Install and load necessary libraries
 # install.packages("readxl")    # For reading Excel files
 # install.packages("dplyr")
 # install.packages("ggplot2")
 # install.packages("factoextra") # For visualizing clusters
 # install.packages("cluster")
-# install.packages("ggplot2")
-# install.packages("cowplot")
-# install.packages("tidyr")
-# install.packages("stringr")
-# install.packages("openxlsx")
-# install.packages("vcd")
-# install.packages("reshape2")
-# install.packages("devtools")
-# install.packages("rrtools")
-# install.packages("remotes")
 
-# Load necessary libraries:
-
-library(devtools)
-#library(rrtools)
-library(remotes)
 library(readxl)
 library(dplyr)
 library(ggplot2)
 library(factoextra)
 library(cluster)
-library(ggplot2)
-library(cowplot)
-library(tidyr)
-library(stringr)
-library(openxlsx)
-library(vcd)
-library(reshape2)
-
-```
-
-----------------------------------------
-# Step 1: Load data and create a dataset
-----------------------------------------
-
-# Load data
-
-```{r, echo=TRUE}
 
 # Load your dataset from an Excel file
+# Replace 'your_file.xlsx' with the actual path to your file
 ceramics_data <- read_excel("analysis/data/raw_data/data_trial02_trimmed.xlsx")
 
 # Ensure your Excel file has columns: actual_diameter, actual_width, actual_height
 # Check the first few rows of your data
 #head(ceramics_data)
 
-```
-
-# Make a new 'numeric_category' column of vessel_types where "1a" becomes "1"
-
-```{r, echo=TRUE}
 # Extract numeric part of type_category (e.g., "1a" becomes "1")
 ceramics_data_typesplit <- ceramics_data %>%
   mutate(numeric_category = as.numeric(gsub("[^0-9]", "", `type_category`)))
-```
 
-# Create dataset with 'actual_diameter', 'actual_width', 'actual_height', and 'numeric_category'
-
-```{r, echo=TRUE}
 # Select the relevant columns for clustering
 ceramics_subset <- ceramics_data_typesplit %>%
   select(actual_diameter, actual_width, actual_height, numeric_category) %>%
@@ -142,14 +233,14 @@ ceramics_subset <- ceramics_data_typesplit %>%
 
 So, now I have created a dataset 'ceramics_subset' which contains the 'actual_diameter', 'actual_width', 'actual_height', and the new type category 'numeric_category' where my types are just named 1 instead of 1a 
 
------------------------------------------------------------
-# Step 2: Boxplot of data points per 'vessel type' category
------------------------------------------------------------
+# Boxplot of how many datapoints I have for each vessel type
 
 ```{r, echo=TRUE}
-# Used libraries:
-#library(ggplot2)
-#library(cowplot)
+# Install and load libraries
+# install.packages("ggplot2")  # Uncomment if you haven't installed ggplot2
+# install.packages("cowplot")  # Uncomment if you haven't installed cowplot
+library(ggplot2)
+library(cowplot)
 
 # Create a data frame to count the number of data points for each vessel type
 vessel_counts <- data.frame(table(ceramics_subset$numeric_category))
@@ -215,13 +306,12 @@ NIck: You need a barplot here, change geom_boxplot() to geom_bar()
 
 -NICK/me: this also points to the conservationism of the pottery, in where the oldest froms are also the most numerous. They do not change the pottery types so often!
 
----------------------------------------------------------------
-# STEP 3: Boxplot of how many datapoint I have per rim category
----------------------------------------------------------------
+# Boxplot of how many datapoint I have per rim category
 
 ```{r, echo=TRUE}
-# Used libraries
-#library(ggplot2)
+
+# Load necessary package
+library(ggplot2)
 
 # Boxplot of 'Counts per Rim Category' 
 
@@ -264,19 +354,17 @@ OBS: There is one type-o where I have some "TC" groups that should be "Tc" -> ch
 
 - The rest of the categories are quite evenly represented!
 
-----------------------------------------------------------------
-# STEP 4: Boxplot of how many datapoint I have per base category
-----------------------------------------------------------------
+# Boxplot of how many datapoint I have per base category
 
 ```{r, echo=TRUE}
 
-# Used libraries
-#library(ggplot2)
-#library(tidyr)
+# Load necessary package
+library(ggplot2)
+library(tidyr)
 
 # Boxplot of 'Counts per Base Category' 
 ceramics_data_typesplit %>% 
-  drop_na(base_category) %>%  #Drop NAs in 'base_category'
+  drop_na(base_category) %>% 
 ggplot(aes(x = base_category)) +
   geom_bar() +
   labs(x = "Base Category", y = "Count", title = "Counts per Base Category") +
@@ -299,15 +387,14 @@ So, this looks nice !
 - I think that I need to register whether the bases are rounded also. With this, I can see which form often has a round base and how the round bases correlate with the rims
 - Make a separate category for the rounded bases
 
------------------------------------------------------------------------------------
-#STEP 5: Exploring which "rim-category" is most often represented per "vessel_type"
------------------------------------------------------------------------------------
+
+### Exploring which "rim-category" is most often represented per "vessel_type" ###
 
 To understand which rim_category is most often associated with each vessel_type, you can explore the relationship between the two categorical variables using several approaches, depending on the depth of analysis you're looking for.
 
 Here are a few options:
 
-# STEP 1: Contingency Table with Chi-Square Test of Independence
+#STEP 1: Contingency Table with Chi-Square Test of Independence
 
 This test checks if there is a significant association between rim_category and vessel_type. A contingency table will show the counts of each combination of vessel_type and rim_category.
 
@@ -341,14 +428,14 @@ p-value < 2.2e-16: The p-value is extremely small (essentially 0), meaning that 
 Since the Chi-Square test only tells you there is an association but not how strong it is, you can calculate Cramér's V to measure the strength of the association.
 
 ```{r, echo=TRUE}
-# Used libraries:
-#library(vcd)
+# Install vcd package if you haven't already
+#install.packages("vcd")
+library(vcd)
 
 # Calculate Cramér's V
 cramers_v_RimAndVessel <- assocstats(table_data_RimAndVessel)
 cramers_v_RimAndVessel
 ```
-
 #PRELIM interpretation:
 
 Key Results:
@@ -403,17 +490,17 @@ Ok, this looks ok, but I still need to adjust it a little bit. Larger axis label
 
 If I read the plot correctly.. I think that I need to understand how to better read it!
 
-----------------------------------------------------------------------
-# STEP 6: Heatmap of correlations between Vessel type and Rim category
-----------------------------------------------------------------------
+# Heatmap of correlations between Vessel type and Rim category
 
 I make a heatmap to see if the plot is more ordered
 
 ```{r, echo=TRUE}
+# Install required packages
+#install.packages("reshape2")
 
-# Used libraries:
-#library(ggplot2)
-#library(reshape2)
+# Load required packages
+library(ggplot2)
+library(reshape2)
 
 # Convert the contingency table to a data frame for ggplot
 df_table <- as.data.frame(table(table_data_RimAndVessel))
@@ -430,5 +517,4 @@ ggplot(df_table, aes(table_data_RimAndVessel, Freq, fill = Freq)) +
   scale_fill_gradient(low = "lightblue", high = "darkblue")  # Adjust fill colors
 
 ```
-
 This does not look right.. I must try to play around with it a bit more..

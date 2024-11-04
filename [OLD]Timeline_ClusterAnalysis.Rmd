@@ -1,15 +1,13 @@
 ---
 title: "Timeline_ClusterAnalysis"
 author: "Soren Pedersen"
-date: "2024-11-04"
+date: "2024-10-28"
 output: html_document
 ---
 
 ### Cluster analysis of vessel size cateogry ###
 
-This document explores the vessel size categories to see if there are any clustering of sizes dependent on vessel types
-
-NICK: it does not make sense to make a cluster analysis of the 'width' and 'height' because you need more datapoints to do a cluster analysis. Make a cluster analysis of 'width', 'height', and the 'orifice diameter'
+This document explores the vessel size categories to see if there are any clustering of sizes dependant on vessel types
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -87,6 +85,8 @@ So, your key variables for clustering would be:
 You can standardize these variables if they are on different scales before running the cluster analysis to ensure fair comparison.
 
 It performs hierarchical and k-means clustering using your size measurements.
+
+NICK: it does not make sense to make a cluster analysis of the 'width' and 'height' because you need more datapoints to do a cluster analysis. Make a cluster analysis of 'width', 'height', and the 'orifice diameter'
 
 # Cluster analysis of 'actual width' and 'orifice diameter'
 
@@ -356,4 +356,6 @@ ggplot(ceramics_data, aes(x = actual_diameter, y = actual_width, color = factor(
 # Optional: Output the cluster result
 table(ceramics_data$cluster)
 
+
 ```
+
