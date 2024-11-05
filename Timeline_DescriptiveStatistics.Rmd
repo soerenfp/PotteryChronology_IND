@@ -45,6 +45,8 @@ To better understand my data I have made a document to explore the data:
 
 - Is there a popular vessel type for sites that are more influential? -> divide the sites into hubs and describe which are more influential than others!
 
+- Arnold (1985): In areas where there is a certain need for water (or other), there might be a demand for vessel shapes relating to storage and carrying water -> try to see if you can use this argument on the oval water storage vessels? Further, the water storage vessels can be sold over long distances if there is a particular demand in an area for water. -> when/where do we see the first large oval storage vessels / when/where do we see the first tightly closed vessels?
+
 # DONE
 
 - Make a boxplot of how many data points you have for each vessel category (DONE)
