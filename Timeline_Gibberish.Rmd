@@ -7,7 +7,7 @@ output: html_document
 
 # GIBBERISH document
 
-This document is just bits of code and thoughts that are not useful or wrong
+This document is just bits of code and thoughts that are not useful or wrong. lets see if it works!
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
