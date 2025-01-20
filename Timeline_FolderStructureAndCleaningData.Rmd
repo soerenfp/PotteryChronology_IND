@@ -278,7 +278,7 @@ Explanation of the Code:
 # Load excel sheet into a dataset, trim whitespaces and replace missing rows with NAs
 
 # Load the Excel file into a dataset
-data_trial02 <- read_excel("analysis/data/raw_data/timeline_data_trial02.xlsx")
+data_measurements <- read_excel("analysis/data/raw_data/01_timelinedata.xlsx")
 
 # View the initial structure of the data
 #str(data_trial02)
@@ -286,20 +286,20 @@ data_trial02 <- read_excel("analysis/data/raw_data/timeline_data_trial02.xlsx")
 # Handle missing values
 # Here, we're filling missing values with NA (default behavior). You can also replace them with specific values or remove rows.
 
-data_trial02 <- data_trial02 %>%
+data_measurements <- data_measurements %>%
   mutate(across(everything(), ~ replace_na(., NA)))  # Fill with NA (optional)
 
 # Trim whitespaces from all character columns
-data_trial02_trimmed <- data_trial02 %>%
+data_measurements_trimmed <- data_measurements %>%
   mutate(across(where(is.character), ~ str_trim(.)))  # Trim whitespace
 
 # View the cleaned data
 #head(data_trial02_trimmed)
 
 # Step 5: Save the cleaned data to a new Excel file
-write.xlsx(data_trial02_trimmed, "analysis/data/raw_data/data_trial02_trimmed.xlsx")
+write.xlsx(data_measurements_trimmed, "analysis/data/raw_data/data_measurements_01.xlsx")
 ```
 
 -------------------------------------------------------------------------------
-Your dataset is now saved as "data_trial02_trimmed.xlsx" in the raw_data folder
+Your dataset is now saved as "data_measurements_01.xlsx" in the raw_data folder
 -------------------------------------------------------------------------------

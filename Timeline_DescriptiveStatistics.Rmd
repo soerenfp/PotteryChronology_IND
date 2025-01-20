@@ -95,7 +95,6 @@ library(dplyr)
 library(ggplot2)
 library(factoextra)
 library(cluster)
-library(ggplot2)
 library(cowplot)
 library(tidyr)
 library(stringr)
@@ -114,38 +113,54 @@ library(reshape2)
 ```{r, echo=TRUE}
 
 # Load your dataset from an Excel file
-ceramics_data <- read_excel("analysis/data/raw_data/data_trial02_trimmed.xlsx")
+ceramics_data <- read_excel("analysis/data/raw_data/data_measurements_01.xlsx")
 
 # Ensure your Excel file has columns: actual_diameter, actual_width, actual_height
 # Check the first few rows of your data
-#head(ceramics_data)
+head(ceramics_data)
 
 ```
 
-# Make a new 'numeric_category' column of vessel_types where "1a" becomes "1"
+# SKIP: Make a new 'numeric_category' column of vessel_types where "1a" becomes "1"
 
 ```{r, echo=TRUE}
 # Extract numeric part of type_category (e.g., "1a" becomes "1")
-ceramics_data_typesplit <- ceramics_data %>%
-  mutate(numeric_category = as.numeric(gsub("[^0-9]", "", `type_category`)))
+#ceramics_data_typesplit <- ceramics_data %>%
+#  mutate(numeric_category = as.numeric(gsub("[^0-9]", "", `type_category`)))
 ```
 
-# Create dataset with 'actual_diameter', 'actual_width', 'actual_height', and 'numeric_category'
+# SKIP: Create dataset with 'actual_diameter', 'actual_width', 'actual_height', and 'numeric_category'
 
 ```{r, echo=TRUE}
 # Select the relevant columns for clustering
-ceramics_subset <- ceramics_data_typesplit %>%
-  select(actual_diameter, actual_width, actual_height, numeric_category) %>%
-  na.omit()  # Remove rows with missing values
+#ceramics_subset <- ceramics_data_typesplit %>%
+#  select(actual_diameter, actual_width, actual_height, numeric_category) %>%
+#  na.omit()  # Remove rows with missing values
 
 # Standardize the data (important when variables have different units, still not sure if this is a good idea!!!)
 #ceramics_scaled <- scale(ceramics_subset)
 ```
 
-So, now I have created a dataset 'ceramics_subset' which contains the 'actual_diameter', 'actual_width', 'actual_height', and the new type category 'numeric_category' where my types are just named 1 instead of 1a 
+------------------------------------------------------
+# STEP 1.1: Make a dataset for the descriptive analysis
+------------------------------------------------------
+
+- I made a new data set only including the "site_name", "type_category", "size_category", ""rim_category", "base_category", "attributes", "actual_diameter", "actual_height", "actual_width"
+- OBS: I noticed I misspelled the "rim_category" in the excel sheet -> correct this!
+- I removed rows with missing values in the "actual_diameter" column (registered as 0.0 in the excel sheet)
+
+```{r, echo=TRUE}
+ceramics_subset <- ceramics_data %>%
+  filter(actual_diameter != 0.0) %>%
+  select(site_name, type_category, size_category, rim_categroy, base_category, 
+         attributes, actual_diameter, actual_height, actual_width)
+
+```
+
+So, now I created a data set "ceramics_subset" of the columns noted above and removed rows from the "actual_diameter" column that contained 0.0 values. The data set contains 576 vessels (611 original). 
 
 -----------------------------------------------------------
-# Step 2: Boxplot of data points per 'vessel type' category
+# Step 2: Boxplot of data points per 'type_category' category
 -----------------------------------------------------------
 
 ```{r, echo=TRUE}
@@ -158,11 +173,12 @@ library(ggplot2)
 library(cowplot)
 
 # Create a data frame to count the number of data points for each vessel type
-vessel_counts <- data.frame(table(ceramics_subset$numeric_category))
-colnames(vessel_counts) <- c("Vessel_Type", "Count")
+vessel_counts <- data.frame(table(ceramics_subset$type_category))   #make a data set of type_category and the counts per category
+
+colnames(vessel_counts) <- c("type_category", "count")    #name the columns in vessel_counts
 
 # Create the bar plot of 'Data points per vessel type'
-bar_plot <- ggplot(vessel_counts, aes(x = as.factor(Vessel_Type), y = Count)) +
+bar_plot <- ggplot(vessel_counts, aes(x = as.factor(type_category), y = count)) +
   geom_col(fill = "lightblue") +
   labs(title = "Number of Data Points per Vessel Type",
        x = "Vessel Type",
@@ -175,17 +191,17 @@ bar_plot <- ggplot(vessel_counts, aes(x = as.factor(Vessel_Type), y = Count)) +
 
 # Legend table for vessel type descriptions
 legend_table <- data.frame(
-  Vessel_Type = 1:16,
+  type_category = 1:15,
   Description = c("Wide-open vessels", "Open vessels", "Closed horizontal-oval vessels", 
                   "Vertical vessels", "Closed vessels", "Tightly-closed vessels", 
                   "Open carinated vessels", "Wide-open carinated vessels", 
                   "Vertical-vertical oval vessels", "Closed-vertical oval vessels", 
                   "Tightly-closed vertical oval vessels", "Lids", 
-                  "Flasks", "Bottles", "Tellem tripods", "Special")
+                  "Flasks", "Bottles", "Tellem tripods")
 )
 
 # Convert the legend table to a plot with adjusted margins
-legend_plot <- ggplot(legend_table, aes(x = "", y = Vessel_Type, label = paste(Vessel_Type, "=", Description))) +
+legend_plot <- ggplot(legend_table, aes(x = "", y = type_category, label = paste(type_category, "=", Description))) +
   geom_text(hjust = 0, size = 3) +  # Reduced text size
   theme_void() +
   theme(
@@ -196,7 +212,7 @@ legend_plot <- ggplot(legend_table, aes(x = "", y = Vessel_Type, label = paste(V
 cowplot::plot_grid(bar_plot, legend_plot, ncol = 2, rel_widths = c(3, 1.5))  # Reduced legend width
 
 ```
-SO, the plot is not perfect (missing right margin), but I can adjust it later.
+OBS: I think I need to include the vessels with 0.0 values in actual_diameter. But otherwise the plot looks nice!
 
 NIck (DONE): You need a barplot here, change geom_boxplot() to geom_bar()
 
@@ -219,7 +235,7 @@ NIck (DONE): You need a barplot here, change geom_boxplot() to geom_bar()
 
 - There is actually a correlation between how "multi-purpose" a vessel is and the amount of data points I have collected. The "closed vessels", "vertical vessels" and the "open vessels" are the three categories you can describe as the most multi-purpose!
 
--NICK/me: this also points to the conservationism of the pottery, in where the oldest froms are also the most numerous. They do not change the pottery types so often!
+-NICK/me: this also points to the conservationism of the pottery, in where the oldest forms are also the most numerous. They do not change the pottery types so often!
 
 ---------------------------------------------------------------
 # STEP 3: Boxplot of how many datapoint I have per rim category
