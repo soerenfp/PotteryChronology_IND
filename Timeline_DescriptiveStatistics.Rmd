@@ -21,45 +21,21 @@ When you click the **Knit** button a document will be generated that includes bo
 
 To better understand my data I have made a document to explore the data:
 
-- which rim type is most popular overall?
+- which rim type is most popular overall? -DONE-
 - which rim type is most popular per site?
 - which rim type is most popular through time?
 
-- which base type is most popular overall?
+- which base type is most popular overall? -DONE-
 - which base type is most popular per site?
 - which base type is most popular through time?
 
-- Which vessel type is most dominant overall?
-- Which vessel type is most dominant pr. site?
+- Which vessel type is most dominant overall? -DONE-
+- Which vessel type is most dominant per site?
 - Which vessel type is most dominant through time?
 
-- What size category is dominant overall?
+- What size category is dominant overall? -DONE-
 - What size category is dominant per site?
 - What size category is dominant through time?
-
-- which form does most often have what type of rim?
-- which form does most often have what type of base?
-
-- which form does most often have decorations?
-- which form has the fewest decorations?
-
-- Is there a popular vessel type for sites that are more influential? -> divide the sites into hubs and describe which are more influential than others!
-
-- Arnold (1985): In areas where there is a certain need for water (or other), there might be a demand for vessel shapes relating to storage and carrying water -> try to see if you can use this argument on the oval water storage vessels? Further, the water storage vessels can be sold over long distances if there is a particular demand in an area for water. -> when/where do we see the first large oval storage vessels / when/where do we see the first tightly closed vessels?
-
-# DONE
-
-- Make a boxplot of how many data points you have for each vessel category (DONE)
-- Make a boxplot of how many data points you have for each rim category (DONE)
-- Make a boxplot of how many data points you have for each base category (DONE)
-
-- Make a mosaicplot of which rim category are most used compared to the form (DONE)
-
-#ToDo!!!
-
-- Make a principal component analysis between the "width" and "vessel type" to see whether some types have smaller or larger sizes. Or perhaps try this with the square cm2?
-- Make a principal component analysis of the "orifice" and the vessel type
-- Make a principal component analysis of the height and the vessel type
 
 -----------------------------------------
 ### STEP 0: Install and load packages ###
@@ -104,9 +80,9 @@ library(reshape2)
 
 ```
 
-----------------------------------------
-# Step 1: Load data and create a dataset
-----------------------------------------
+--------------------------------------------------------------------------------
+# STEP 0: Load data (Skip if you have already loaded the data in previous steps)
+--------------------------------------------------------------------------------
 
 # Load data
 
@@ -121,32 +97,13 @@ head(ceramics_data)
 
 ```
 
-# SKIP: Make a new 'numeric_category' column of vessel_types where "1a" becomes "1"
-
-```{r, echo=TRUE}
-# Extract numeric part of type_category (e.g., "1a" becomes "1")
-#ceramics_data_typesplit <- ceramics_data %>%
-#  mutate(numeric_category = as.numeric(gsub("[^0-9]", "", `type_category`)))
-```
-
-# SKIP: Create dataset with 'actual_diameter', 'actual_width', 'actual_height', and 'numeric_category'
-
-```{r, echo=TRUE}
-# Select the relevant columns for clustering
-#ceramics_subset <- ceramics_data_typesplit %>%
-#  select(actual_diameter, actual_width, actual_height, numeric_category) %>%
-#  na.omit()  # Remove rows with missing values
-
-# Standardize the data (important when variables have different units, still not sure if this is a good idea!!!)
-#ceramics_scaled <- scale(ceramics_subset)
-```
-
-------------------------------------------------------
-# STEP 1.1: Make a dataset for the descriptive analysis
-------------------------------------------------------
+-----------------------------------------------------
+# STEP 1: Make a dataset for the descriptive analysis
+-----------------------------------------------------
 
 - I made a new data set only including the "site_name", "type_category", "size_category", ""rim_category", "base_category", "attributes", "actual_diameter", "actual_height", "actual_width"
-- I removed rows with missing values in the "actual_diameter" column (registered as 0.0 in the excel sheet)
+- (NOT: I removed rows with missing values in the "actual_diameter" column (registered as 0.0 in the excel sheet))
+- This dataset it used for making the following "nice" boxplots!
 
 ```{r, echo=TRUE}
 ceramics_subset <- ceramics_data %>%
@@ -156,11 +113,11 @@ ceramics_subset <- ceramics_data %>%
 
 ```
 
-So, now I created a data set "ceramics_subset" of the columns noted above (and removed rows from the "actual_diameter" column that contained 0.0 values). Tha dataset still contains the original 611 vessels.
+So, now I created a data set "ceramics_subset" of the columns noted above (NOT: and removed rows from the "actual_diameter" column that contained 0.0 values). Tha dataset still contains the original 611 vessels.
 
------------------------------------------------------------
+-------------------------------------------------------------
 # Step 2: Boxplot of data points per 'type_category' category
------------------------------------------------------------
+-------------------------------------------------------------
 
 ```{r, echo=TRUE}
 # Used libraries:
@@ -261,7 +218,7 @@ ggplot(aes(x = rim_category)) +
   theme_minimal()
 ```
 
-#Let's try to make the plot nicer
+Let's try to make the plot nicer
 
 ```{r, echo=TRUE}
 
@@ -318,7 +275,7 @@ cowplot::plot_grid(bar_plot, legend_plot, ncol = 2, rel_widths = c(3, 1.5))  # R
 ```
 So, this looks damn good! 
 
-# PRELIM interpretation:
+# PRELIM interpretation of trial data:
 
 - The Sr (Simple Rounded) category is by far the most represented, as expected! Perhaps you can also say that this category is very multi-purpose because it does not include or exclude any functions?
 
@@ -359,7 +316,7 @@ ggplot(aes(x = base_category)) +
 ```
 So, this looks nice !
 
-#Let's try to make the plot nicer
+Let's try to make the plot nicer
 
 ```{r, echo=TRUE}
 
@@ -406,7 +363,9 @@ cowplot::plot_grid(bar_plot, legend_plot, ncol = 2, rel_widths = c(3, 1.5))  # R
 ```
 So, this plot looks nice! It only includes the vessels that have a registered base, so NA's are excluded!
 
-#PRELIM interpretation:
+OBS: I need to include the registrations I have from the excavation reports I have in the RAW database in the final presentation!
+
+#PRELIM interpretation of trial data:
 
 - Most of the bases are NA because nothing was registered
 - Bpe (Base, pedestalled) are the category with most data points -> in this category we also have the Tellem tripods base - perhaps I need to make a separate category for that!
@@ -416,140 +375,134 @@ So, this plot looks nice! It only includes the vessels that have a registered ba
 - Bl (Bases, legged) I think only has one count (jenne-jeno)
 - Special -> I must find out what is the special category!
 
-#ToDo:
-- I think that I need to register whether the bases are rounded also. With this, I can see which form often has a round base and how the round bases correlate with the rims
-- Make a separate category for the rounded bases
-
------------------------------------------------------------------------------------
-#STEP 5: Exploring which "rim-category" is most often represented per "vessel_type"
------------------------------------------------------------------------------------
-
-To understand which rim_category is most often associated with each vessel_type, you can explore the relationship between the two categorical variables using several approaches, depending on the depth of analysis you're looking for.
-
-Here are a few options:
-
-# STEP 1: Contingency Table with Chi-Square Test of Independence
-
-This test checks if there is a significant association between rim_category and vessel_type. A contingency table will show the counts of each combination of vessel_type and rim_category.
+----------------------------------------------------------------
+# STEP 5: Boxplot of how many datapoint I have per size cateogry
+----------------------------------------------------------------
 
 ```{r, echo=TRUE}
-# Create a contingency table
-table_data_RimAndVessel <- table(ceramics_data_typesplit$numeric_category, ceramics_data_typesplit$rim_category)
-
-# Perform the Chi-Square test of independence
-chisq_test_RimAndVessel <- chisq.test(table_data_RimAndVessel)
-
-# View the result
-chisq_test_RimAndVessel
-
+ceramics_data %>% 
+drop_na(size_category) %>% 
+ggplot(aes(x = size_category)) +
+  geom_bar() +
+  labs(x = "Size Category", y = "Count", title = "Counts per Size Category") +
+  theme_minimal()
 ```
-Interpretation (explained): If the p-value is small (typically < 0.05), it suggests a significant association between vessel_type and rim_category.
+Very nice! As expected I have the most vessels in size category "b", but surprising is that the small size category "a" is so dominant.
 
-# PRELIM interpretation:
-
-It looks like you've successfully run the Chi-Square test, and the results show a significant association between vessel_type and rim_category. Let's break down the output:
-
-Results Interpretation:
-
-X-squared = 1097.7: This is the test statistic for the Chi-Square test, indicating the strength of the association. Higher values suggest a stronger association.
-
-df = 350: The degrees of freedom, which is calculated as (number of vessel_type categories - 1) * (number of rim_category categories - 1).
-
-p-value < 2.2e-16: The p-value is extremely small (essentially 0), meaning that there is a statistically significant association between vessel_type and rim_category. In other words, the distribution of rim types is not independent of vessel types.
-
-#STEP 2: Effect Size 
-
-Since the Chi-Square test only tells you there is an association but not how strong it is, you can calculate Cramér's V to measure the strength of the association.
-
-```{r, echo=TRUE}
-# Used libraries:
-#library(vcd)
-
-# Calculate Cramér's V
-cramers_v_RimAndVessel <- assocstats(table_data_RimAndVessel)
-cramers_v_RimAndVessel
-```
-
-#PRELIM interpretation:
-
-Key Results:
-
-Likelihood Ratio (G²) = 404.17, p-value = 0.02411:
-This statistic is another measure of association between vessel_type and rim_category. The p-value of 0.02411 suggests that the association is statistically significant, but less strong compared to the Pearson Chi-Square test.
-
-Pearson Chi-Square (X²) = 1097.72, p-value = 0.00000:
-This reiterates that the Pearson Chi-Square test found a very strong association between the two variables with a highly significant p-value (essentially zero).
-
-Cramér's V = 0.362:
-This is the measure of effect size. A value of 0.362 indicates a moderate association between vessel_type and rim_category.
-
-Contingency Coefficient = 0.805:
-This is another measure of association, which, like Cramér's V, suggests a strong association (values closer to 1 indicate a stronger association). However, Cramér's V is more commonly used for interpreting relationships in large contingency tables like yours.
-
-The relationship between vessel_type and rim_category is statistically significant (as indicated by both the Pearson Chi-Square and Likelihood Ratio tests).
-
-Cramér's V value of 0.362 shows that the association is moderate in strength. This suggests that there is some non-random relationship between the two variables, but it's not a very strong or overwhelming relationship.
-
-# STEP 3: Mosaic plot
-
-A visual way to explore the relationship is to use a mosaic plot, which visually represents the counts in a contingency table.
+Let's try to make the plot a little nicer
 
 ```{r, echo=TRUE}
 
-# Create a mosaic plot
-mosaicplot(table_data_RimAndVessel, main = "Mosaic Plot of Vessel Type and Rim Category", 
-           xlab = "Vessel Type", ylab = "Rim Category", color = TRUE)
-
-```
-
-Let's try to make the mosaic plot more nice:
-
-```{r, echo=TRUE}
-# Adjust the plot window size for height
-par(mai = c(1, 2, 0.5, 0.5))  # Adjust margins: bottom, left, top, right
-
-# Create a mosaic plot with horizontal Y-axis labels and increased plot height
-mosaicplot(table_data_RimAndVessel, 
-           main = "Mosaic Plot of Vessel Type and Rim Category", 
-           xlab = "Vessel Type", 
-           ylab = "Rim Category", 
-           color = TRUE, 
-           las = 1,           # Make the Y-axis labels horizontal
-           cex.axis = 0.4)    # Adjust the size of all axis labels
-
-```
-Ok, this looks ok, but I still need to adjust it a little bit. Larger axis labels and perhaps also a larger plot?
-
-#PRELIM interpretation:
-
-If I read the plot correctly.. I think that I need to understand how to better read it!
-
-----------------------------------------------------------------------
-# STEP 6: Heatmap of correlations between Vessel type and Rim category
-----------------------------------------------------------------------
-
-I make a heatmap to see if the plot is more ordered
-
-```{r, echo=TRUE}
-
-# Used libraries:
+# Load required libraries
 #library(ggplot2)
-#library(reshape2)
+#library(cowplot)
 
-# Convert the contingency table to a data frame for ggplot
-df_table <- as.data.frame(table(table_data_RimAndVessel))
+# Create a data frame to count the number of data points for each vessel type
+size_counts <- data.frame(table(ceramics_subset$size_category))
+colnames(size_counts) <- c("size_category", "Count")
 
-# Create a heatmap-like plot with ggplot
-ggplot(df_table, aes(table_data_RimAndVessel, Freq, fill = Freq)) +
-  geom_tile() +
-  labs(x = "Vessel Type", y = "Rim Category", fill = "Count") +
+# Create the bar plot of 'Data points per vessel type'
+bar_plot <- ggplot(size_counts, aes(x = as.factor(size_category), y = Count)) +
+  geom_col(fill = "lightblue") +
+  labs(title = "Number of Data Points per Size category",
+       x = "Size Category",
+       y = "Number of Data Points") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10), # Adjust X-axis labels
-        axis.text.y = element_text(size = 10),  # Adjust Y-axis labels
-        panel.grid.major = element_blank(),      # Remove grid lines
-        panel.grid.minor = element_blank()) +    # Remove minor grid lines
-  scale_fill_gradient(low = "lightblue", high = "darkblue")  # Adjust fill colors
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels for better visibility
+    plot.margin = margin(10, 10, 10, 10)  # Adjust plot margins if needed
+  )
+
+# Legend table for vessel type descriptions
+legend_table <- data.frame(
+  Size_Type = 1:5,
+  Abbreviation = c("a", "b", "c", "d", "e"),
+  Description = c("<14 cm", "15-24 cm", "25-34 cm", "35-44 cm", ">45 cm")
+)
+
+# Convert the legend table to a plot with adjusted margins and abbreviations
+legend_plot <- ggplot(legend_table, aes(x = "", y = Size_Type, label = paste(Abbreviation, "=", Description))) +
+  geom_text(hjust = 0, size = 3) +  # Reduced text size
+  theme_void() +
+  theme(
+    plot.margin = margin(5, 20, 5, -140)  # Adjusted margins for readability
+  )
+
+# Arrange the bar plot and the legend side by side with adjusted widths
+cowplot::plot_grid(bar_plot, legend_plot, ncol = 2, rel_widths = c(3, 1.5))  # Reduced legend width
 
 ```
+So, this looks very nice!
 
-This does not look right.. I must try to play around with it a bit more..
+# Interpretation of the 02_timelinedata results
+
+OBS: Remember that the size categories are based on the "actual_width" of the vessels and NOT something like volume
+
+- Surprising that the "a" size category is so dominant. This is perhaps because the small vessels are often dropped or broken?? 14.9 cm (the largest vessels in this category) might be used for cooking also, but by far the most vessels are small short-term storage pots, or perhaps special vessels for casting or salt making??
+
+- As expected, the size category "b" is the most dominant vessel size. In this category you would expect to find the "normal" cooking vessels and vessels that are more or less multi-purpose.
+
+- As expected, the size category "c" is dominant, but only third most dominant after the size "a" groups (slightly). In this category I would expect that many of the "wide-open vessels" are represented, and otherwise many sort- to medium-term storage vessels.
+
+- As expected, the size "d" vessels are not so dominant. In this category I would expect to find the long-term storage vessels, fermenting/brewing vessels, and many of the large "wide-open" vessels.
+
+- As expected, the size cateogry "e" is the least dominant. I this category I would expect to find the very large "wide-open" vessels, and otherwise vessels that are highly specialized like large brewing vessels or special long-term storage vessels (perhaps to be dug into the ground?).
+
+---------------------------------------------------------
+# STEP ??: Exploring the development of size through time
+---------------------------------------------------------
+
+#Q in Chad: 
+"I have plotted my vessel in BC and AD terms (example: 250-100 BC, 150-300 AD) and I need to see the development of vessel sizes through time. How do I do this? Shall I change my BC terms in my spreadsheet to -250-100, or how?"
+
+#A from Chad
+To analyze the development of vessel sizes through time, it's essential to convert your BC and AD dates into a continuous numerical scale. This ensures that you can plot the data effectively and interpret trends over time. Here's how to handle it:
+
+- 1. Convert BC and AD into a Continuous Scale
+
+BC Dates: Represent BC dates as negative numbers. For example:
+250–100 BC → -250 to -100
+
+AD Dates: Represent AD dates as positive numbers. For example:
+150–300 AD → 150 to 300
+
+- 2. Adjust Your Spreadsheet
+
+Create two columns in your spreadsheet for the start date and end date of each time range:
+For 250–100 BC, enter -250 in the start column and -100 in the end column.
+For 150–300 AD, enter 150 in the start column and 300 in the end column.
+
+- 3. Calculate the Midpoint of Each Time Range
+
+Add a new column for the midpoint (average) of the time range:
+
+midpoint = ("start date" + "end date") / 2
+
+For example:
+For BC: -250 to -100: Midpoint = (−250+ −100)/2= -175
+For AD: 150 to 300: Midpoint = (150+300)/2= 225
+
+This will provide a single value for each vessel's time period, making it easier to analyze trends.
+
+- 4. Visualize Vessel Sizes Through Time
+
+Use the midpoint column as the x-axis (time) and vessel size (e.g., height, diameter, or volume) as the y-axis.
+
+Create a scatter plot, line plot, or boxplot using ggplot2 in R or your preferred plotting tool:
+
+```{r, echo=TRUE}
+ggplot(data, aes(x = midpoint, y = vessel_size)) +
+  geom_point() + 
+  geom_smooth(method = "loess", se = FALSE) +  # Optional trend line
+  labs(title = "Development of Vessel Sizes Over Time",
+       x = "Time (Years, BC/AD)",
+       y = "Vessel Size") +
+  theme_minimal()
+```
+
+- 5. Consider Trends
+
+Look for patterns, such as increases or decreases in size over time or abrupt changes during specific periods.
+
+Use color or shapes to differentiate vessel types, rim categories, or other attributes to add depth to the analysis.
+

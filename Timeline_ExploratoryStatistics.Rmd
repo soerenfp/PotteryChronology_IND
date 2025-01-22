@@ -1,0 +1,395 @@
+---
+title: "Timeline_ExploratoryStatistics"
+author: "Soren Pedersen"
+date: "2025-01-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+### Ideas for this document ###
+
+- which form does most often have what type of rim?
+- which form does most often have what type of base?
+- Which sizes are dominant per vessel form? 
+
+- which form does most often have decorations?
+- which form has the fewest decorations?
+
+- Is there a popular vessel type for sites that are more influential? -> divide the sites into hubs and describe which are more influential than others!
+
+- Arnold (1985): In areas where there is a certain need for water (or other), there might be a demand for vessel shapes relating to storage and carrying water -> try to see if you can use this argument on the oval water storage vessels? Further, the water storage vessels can be sold over long distances if there is a particular demand in an area for water. -> when/where do we see the first large oval storage vessels / when/where do we see the first tightly closed vessels?
+
+--------------
+# INTRODUCTION
+--------------
+
+This document will explore whether there are any patterns in my data. 
+
+To explore other factors that may affect rim types, you can use several approaches to analyze the relationships between rim categories and other variables (like vessel size, base types, orifice data, handle data, etc.).
+
+Here's how you can approach it:
+
+Exploratory Data Analysis (EDA):
+Before diving into statistical tests, conduct an exploratory analysis of your data. Visualize the distributions of other variables (like size, base type, etc.) and see if there are any visible trends or patterns that might relate to rim type.
+
+Boxplots, histograms, and scatter plots can be helpful in visually assessing how these variables are distributed in relation to rim types.
+
+#Chi-squared Tests for Categorical Variables:
+
+You can perform Chi-squared tests or Fisher's exact tests (for small sample sizes) to assess the association between rim categories and other categorical variables like base types, handle types, or orifice categories.
+
+For example:
+
+```{r, echo=TRUE}
+chisq.test(table(ceramics_data$rim_category, ceramics_data$base_category))
+```
+
+#ANOVA or Kruskal-Wallis Test for Numeric Data:
+
+If you have numeric data like vessel size (height, width, or diameter), you can use ANOVA (for normally distributed data) or Kruskal-Wallis test (for non-normal data) to assess whether there are significant differences in the numeric variables across different rim categories.
+
+For example, to check if there’s a difference in size across rim types:
+
+```{r, echo=TRUE}
+anova_result <- aov(actual_diameter ~ rim_category, data = ceramics_data)
+summary(anova_result)
+```
+
+If your data is not normally distributed, use the Kruskal-Wallis test:
+
+```{r, echo=TRUE}
+kruskal.test(actual_diameter ~ rim_category, data = ceramics_data)
+```
+
+#Multiple Linear Regression or Generalized Linear Models (GLM):
+
+To investigate multiple factors simultaneously (e.g., size, base type, orifice type), you can use linear regression (if your dependent variable is continuous) or logistic regression (if your dependent variable is categorical) to model the relationship between rim types and other predictors.
+
+For example, if you're predicting rim category (assuming it's a factor), you can fit a logistic regression model:
+
+```{r, echo=TRUE}
+glm_result <- glm(rim_category ~ size_category + base_category + orifice_diameter + handle_type, 
+                  data = ceramics_data, 
+                  family = binomial())  # For binary categories
+
+summary(glm_result)
+```
+
+If you want to account for more than one category of rim, you might consider multinomial logistic regression:
+
+```{r, echo=TRUE}
+library(nnet)
+multinom_result <- multinom(rim_category ~ size_category + base_category + orifice_diameter + handle_type, 
+                            data = ceramics_data)
+
+summary(multinom_result)
+```
+
+#Principal Component Analysis (PCA):
+
+If you're dealing with many numeric variables, PCA can help reduce the dimensionality and identify which features (such as size, height, diameter) most influence the rim categories.
+
+For example:
+
+```{r, echo=TRUE}
+pca_result <- prcomp(ceramics_data[, c("actual_diameter", "actual_height", "actual_width")], scale = TRUE)
+
+summary(pca_result)
+```
+
+#Cluster Analysis:
+
+You can also perform cluster analysis (e.g., K-means or Hierarchical Clustering) to group ceramics based on their attributes (size, base, rim type, etc.) and see if rim types naturally separate based on other characteristics.
+
+For example:
+
+```{r, echo=TRUE}
+kmeans_result <- kmeans(ceramics_data[, c("actual_diameter", "actual_height", "actual_width")], centers = 3)
+
+table(kmeans_result$cluster, ceramics_data$rim_category)
+```
+
+#Summary of steps:
+
+STEP 1. Perform exploratory data analysis to visually inspect patterns.
+
+STEP 2. Use Chi-squared tests or ANOVA to assess relationships between rim categories and other variables.
+
+STEP 3. Apply multiple regression techniques to account for multiple factors.
+
+STEP 4. Use PCA or cluster analysis to find underlying structures in your data.
+
+By combining these methods, you can gain a deeper understanding of the factors influencing rim categories and their dependencies on other vessel attributes.
+
+# Load libraries
+
+```{r, echo=TRUE}
+
+# Install necessary packages:
+
+# install.packages("readxl")    # For reading Excel files
+# install.packages("dplyr")
+# install.packages("ggplot2")
+# install.packages("factoextra") # For visualizing clusters
+# install.packages("cluster")
+# install.packages("ggplot2")
+# install.packages("cowplot")
+# install.packages("tidyr")
+# install.packages("stringr")
+# install.packages("openxlsx")
+# install.packages("vcd")
+# install.packages("reshape2")
+# install.packages("devtools")
+# install.packages("rrtools")
+# install.packages("remotes")
+
+# Load necessary libraries:
+
+library(devtools)
+#library(rrtools)
+library(remotes)
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(factoextra)
+library(cluster)
+library(cowplot)
+library(tidyr)
+library(stringr)
+library(openxlsx)
+library(vcd)
+library(reshape2)
+
+```
+
+--------------------------------------------------------------------------------
+# STEP 0: Load data (Skip if you have already loaded the data in previous steps)
+--------------------------------------------------------------------------------
+
+# Load data
+
+```{r, echo=TRUE}
+
+# Load your dataset from an Excel file
+ceramics_data <- read_excel("analysis/data/raw_data/data_measurements_01.xlsx")
+
+# Ensure your Excel file has columns: actual_diameter, actual_width, actual_height
+# Check the first few rows of your data
+head(ceramics_data)
+
+```
+
+-----------------------------------------------------------------------------------
+#STEP 2: Exploring which "rim-category" is most often represented per "vessel_type"
+-----------------------------------------------------------------------------------
+
+To understand which rim_category is most often associated with each vessel_type, you can explore the relationship between the two categorical variables using several approaches, depending on the depth of analysis you're looking for.
+
+Here are a few options:
+
+# 1: Contingency Table with Chi-Square Test of Independence
+
+This test checks if there is a significant association between rim_category and vessel_type. A contingency table will show the counts of each combination of vessel_type and rim_category.
+
+```{r, echo=TRUE}
+# Create a contingency table
+table_data_RimAndVessel <- table(ceramics_data$type_category, ceramics_data$rim_category)
+
+# Perform the Chi-Square test of independence
+chisq_test_RimAndVessel <- chisq.test(table_data_RimAndVessel)
+
+# View the result
+chisq_test_RimAndVessel
+
+```
+Interpretation (explained): If the p-value is small (typically < 0.05), it suggests a significant association between vessel_type and rim_category.
+
+# PRELIM interpretation of trial data:
+
+It looks like you've successfully run the Chi-Square test, and the results show a significant association between vessel_type and rim_category. Let's break down the output:
+
+Results Interpretation:
+
+X-squared = 1097.7: This is the test statistic for the Chi-Square test, indicating the strength of the association. Higher values suggest a stronger association.
+
+df = 350: The degrees of freedom, which is calculated as (number of vessel_type categories - 1) * (number of rim_category categories - 1).
+
+p-value < 2.2e-16: The p-value is extremely small (essentially 0), meaning that there is a statistically significant association between vessel_type and rim_category. In other words, the distribution of rim types is not independent of vessel types.
+
+# Interpretation of the 02_timelinedata results
+
+data:  table_data_RimAndVessel
+X-squared = 438.94, df = 299, p-value = 2.313e-07
+
+1. Null Hypothesis (H₀):REJECTED
+The rim categories and vessel categories are independent (no association).
+
+2. Test Results:
+Chi-squared statistic (X-squared): 438.94
+Degrees of freedom (df): 299
+P-value: 2.313e-07 (which is 0.0000002313)
+
+3. Interpretation:
+The p-value is extremely small (much smaller than the commonly used threshold of 0.05). This means there is strong evidence to reject the null hypothesis (H₀).
+
+4. Conclusion:
+There is a significant association between rim categories and vessel categories. This suggests that the distribution of rim categories depends on the vessel type—they are not independent.
+
+5. Next Steps:
+
+- Assess Practical Significance: Look at the contingency table to identify specific rim and vessel types that contribute most to the association (e.g., large residuals).
+
+- Visualize: Consider mosaic plots or heatmaps to better understand the patterns in the data.
+
+# 2: Effect Size: Cramer's V 
+
+Since the Chi-Square test only tells you there is an association but not how strong it is, you can calculate Cramér's V to measure the strength of the association.
+
+Key Facts:
+Range: Cramér's V values range from 0 to 1.
+
+0: No association between the variables.
+
+1: Perfect association (one variable completely determines the other).
+Interpretation of Strength:
+
+The strength of association depends on the Cramér's V value:
+
+0.00–0.10: Weak or negligible association.
+0.11–0.30: Moderate association.
+0.31–0.50: Strong association.
+> 0.50: Very strong association.
+
+```{r, echo=TRUE}
+# Used libraries:
+#library(vcd)
+
+# Calculate Cramér's V
+cramers_v_RimAndVessel <- assocstats(table_data_RimAndVessel)
+cramers_v_RimAndVessel
+```
+
+#PRELIM interpretation of trial data:
+
+Key Results:
+
+Likelihood Ratio (G²) = 404.17, p-value = 0.02411:
+This statistic is another measure of association between vessel_type and rim_category. The p-value of 0.02411 suggests that the association is statistically significant, but less strong compared to the Pearson Chi-Square test.
+
+Pearson Chi-Square (X²) = 1097.72, p-value = 0.00000:
+This reiterates that the Pearson Chi-Square test found a very strong association between the two variables with a highly significant p-value (essentially zero).
+
+Cramér's V = 0.362:
+This is the measure of effect size. A value of 0.362 indicates a moderate association between vessel_type and rim_category.
+
+Contingency Coefficient = 0.805:
+This is another measure of association, which, like Cramér's V, suggests a strong association (values closer to 1 indicate a stronger association). However, Cramér's V is more commonly used for interpreting relationships in large contingency tables like yours.
+
+The relationship between vessel_type and rim_category is statistically significant (as indicated by both the Pearson Chi-Square and Likelihood Ratio tests).
+
+Cramér's V value of 0.362 shows that the association is moderate in strength. This suggests that there is some non-random relationship between the two variables, but it's not a very strong or overwhelming relationship.
+
+# Interpretation of 02_timelinedata results
+
+                    X^2  df   P(> X^2)
+Likelihood Ratio 387.49 299 4.1969e-04
+Pearson          438.94 299 2.3128e-07
+
+Phi-Coefficient   : NA 
+Contingency Coeff.: 0.652 
+Cramer's V        : 0.238
+
+With a Cramér's V value of 0.238, here's the interpretation:
+
+Cramér's V = 0.238 indicates a moderate association between rim categories and vessel types.
+
+The closer the value is to 1, the stronger the association, and closer to 0 suggests weaker or no association.
+
+Since 0.238 is closer to the lower end, this suggests that the relationship between rim categories and vessel types is not extremely strong, but it is still noticeable and statistically significant.
+
+Overall, you can conclude that there is a moderate relationship between the rim categories and vessel types in your dataset. This supports the finding that they are not independent, but the association is not very strong.
+
+OBS: The old trial data I had Cramer's V =0.362. In the new results I have =0.238. This suggests that there is a weaker association of rims and vessels, but still strong enough to continue a statistical analysis!
+
+# Conclusion on Pearson's Chi and Cramer's V:
+
+Pearson's Chi-squared test only tells you whether there is any association between the two variables (rim categories and vessel types), and it shows a statistically significant relationship (p-value is extremely small), but it doesn't tell you how strong that relationship is.
+
+Cramér's V measures the strength of the association, and the value 0.238 indicates a moderate relationship between the two variables. It shows that while the relationship is significant, it is not extremely strong.
+
+Conclusion:
+
+- You can conclude that there is indeed a statistically significant relationship between rim categories and vessel types (based on the Chi-squared test), but the strength of that relationship is moderate (based on Cramér's V).
+
+- This means that the type of rim is somewhat dependent on the type of vessel, but the association isn't extremely strong. There are likely other factors influencing the distribution of rim categories, but vessel type plays a meaningful role.
+
+In short, while the association is significant and moderate, it's not a very strong dependency between the two variables.
+
+# 3: Mosaic plot
+
+A visual way to explore the relationship is to use a mosaic plot, which visually represents the counts in a contingency table.
+
+```{r, echo=TRUE}
+
+# Create a mosaic plot
+mosaicplot(table_data_RimAndVessel, main = "Mosaic Plot of Vessel Type and Rim Category", 
+           xlab = "Vessel Type", ylab = "Rim Category", color = TRUE)
+
+```
+
+Let's try to make the mosaic plot more nice:
+
+```{r, echo=TRUE}
+# Adjust the plot window size for height
+par(mai = c(1, 2, 0.5, 0.5))  # Adjust margins: bottom, left, top, right
+
+# Create a mosaic plot with horizontal Y-axis labels and increased plot height
+mosaicplot(table_data_RimAndVessel, 
+           main = "Mosaic Plot of Vessel Type and Rim Category", 
+           xlab = "Vessel Type", 
+           ylab = "Rim Category", 
+           color = TRUE, 
+           las = 1,           # Make the Y-axis labels horizontal
+           cex.axis = 0.4)    # Adjust the size of all axis labels
+
+```
+Ok, this looks ok, but I still need to adjust it a little bit. Larger axis labels and perhaps also a larger plot?
+
+#PRELIM interpretation:
+
+If I read the plot correctly.. I think that I need to understand how to better read it!
+
+# 4: Heatmap of correlations between Vessel type and Rim category
+
+I make a heatmap to see if the plot is more ordered
+
+```{r, echo=TRUE}
+
+# Used libraries:
+#library(ggplot2)
+#library(reshape2)
+
+# Convert the contingency table to a data frame for ggplot
+df_table <- as.data.frame(table(table_data_RimAndVessel))
+
+# Create a heatmap-like plot with ggplot
+ggplot(df_table, aes(table_data_RimAndVessel, Freq, fill = Freq)) +
+  geom_tile() +
+  labs(x = "Vessel Type", y = "Rim Category", fill = "Count") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10), # Adjust X-axis labels
+        axis.text.y = element_text(size = 10),  # Adjust Y-axis labels
+        panel.grid.major = element_blank(),      # Remove grid lines
+        panel.grid.minor = element_blank()) +    # Remove minor grid lines
+  scale_fill_gradient(low = "lightblue", high = "darkblue")  # Adjust fill colors
+
+```
+
+This does not look right.. I must try to play around with it a bit more..
