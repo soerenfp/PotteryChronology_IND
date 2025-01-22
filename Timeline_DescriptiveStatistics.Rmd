@@ -150,15 +150,13 @@ head(ceramics_data)
 
 ```{r, echo=TRUE}
 ceramics_subset <- ceramics_data %>%
-#  filter(actual_diameter != 0.0) %>%
+#  filter(actual_diameter != 0.0) %>%   #Only filter the 0,0s later!
   select(site_name, type_category, size_category, rim_category, base_category, 
          attributes, actual_diameter, actual_height, actual_width)
 
 ```
 
-So, now I created a data set "ceramics_subset" of the columns noted above and removed rows from the "actual_diameter" column that contained 0.0 values. The data set contains 576 vessels (611 original).
-
-I need the count of the "actual_diameter" 0.0 also, so I turned off the filter()
+So, now I created a data set "ceramics_subset" of the columns noted above (and removed rows from the "actual_diameter" column that contained 0.0 values). Tha dataset still contains the original 611 vessels.
 
 -----------------------------------------------------------
 # Step 2: Boxplot of data points per 'type_category' category
@@ -213,7 +211,7 @@ legend_plot <- ggplot(legend_table, aes(x = "", y = type_category, label = paste
 cowplot::plot_grid(bar_plot, legend_plot, ncol = 2, rel_widths = c(3, 1.5))  # Reduced legend width
 
 ```
-OBS: I think I need to include the vessels with 0.0 values in actual_diameter for the total count. But otherwise the plot looks nice!
+This plot looks nice! It includes all the 611 vessels.
 
 NIck (DONE): You need a barplot here, change geom_boxplot() to geom_bar()
 
@@ -351,7 +349,7 @@ So, this looks damn good!
 #library(tidyr)
 
 # Boxplot of 'Counts per Base Category' 
-ceramics_data %>% 
+ceramics_subset %>% 
   drop_na(base_category) %>%  #Drop NAs in 'base_category'
 ggplot(aes(x = base_category)) +
   geom_bar() +
@@ -370,7 +368,7 @@ So, this looks nice !
 #library(cowplot)
 
 # Create a data frame to count the number of data points for each vessel type
-base_counts <- data.frame(table(ceramics_data$base_category))
+base_counts <- data.frame(table(ceramics_subset$base_category))
 colnames(base_counts) <- c("base_category", "Count")
 
 # Create the bar plot of 'Data points per vessel type'
@@ -387,10 +385,11 @@ bar_plot <- ggplot(base_counts, aes(x = as.factor(base_category), y = Count)) +
 
 # Legend table for vessel type descriptions
 legend_table <- data.frame(
-  Base_Type = 1:7,
-  Abbreviation = c("Bf", "Br", "Bpe", "Bl", "Bc", "Bpo", "Sp"),
+  Base_Type = 1:9,
+  Abbreviation = c("Bf", "Br", "Bpe", "Bl", "Bc", "Bpo", "Sp", "Bro", "Bt"),
   Description = c("Bases, flat", "Bases, ring", "Bases, pedestal", 
-                  "Bases, legged", "Bases, concave", "Bases, pointy", "Special")
+                  "Bases, legged", "Bases, concave", "Bases, pointy", "Special", 
+                  "Bases, rounded", "Bases, tripod")
 )
 
 # Convert the legend table to a plot with adjusted margins and abbreviations
@@ -405,6 +404,7 @@ legend_plot <- ggplot(legend_table, aes(x = "", y = Base_Type, label = paste(Abb
 cowplot::plot_grid(bar_plot, legend_plot, ncol = 2, rel_widths = c(3, 1.5))  # Reduced legend width
 
 ```
+So, this plot looks nice! It only includes the vessels that have a registered base, so NA's are excluded!
 
 #PRELIM interpretation:
 
