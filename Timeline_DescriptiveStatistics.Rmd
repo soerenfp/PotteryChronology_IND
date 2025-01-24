@@ -30,7 +30,7 @@ To better understand my data I have made a document to explore the data:
 - which base type is most popular through time?
 
 - Which vessel type is most dominant overall? -DONE-
-- Which vessel type is most dominant per site?
+- Which vessel type is most dominant per site? -DONE-
 - Which vessel type is most dominant through time?
 
 - What size category is dominant overall? -DONE-
@@ -467,6 +467,11 @@ OBS: "VS01" which is the addition to the data tables I produce refers to "Vessel
 #library(dplyr)
 #library(viridis)
 
+# Load required libraries
+#library(ggplot2)
+#library(dplyr)
+#library(viridis)
+
 # Assuming your dataset is named 'ceramics_subset' with columns 'site_name' and 'type_category'
 # Count the occurrences of type_category per site
 data_count_VS01 <- ceramics_subset %>%
@@ -489,9 +494,10 @@ type_descriptions_VS01$type_category <- as.character(type_descriptions_VS01$type
 data_count_VS01 <- data_count_VS01 %>%
   left_join(type_descriptions_VS01, by = "type_category")
 
-# Reorder type_category to ensure numeric order in the legend (OBS: I think I need to change this area so that my x-axis is in numeric order)
+# Ensure the x-axis (type_category) and legend are in numeric order
 data_count_VS01 <- data_count_VS01 %>%
-  mutate(type_description = factor(type_description, levels = type_descriptions_VS01$type_description))
+  mutate(type_category = factor(type_category, levels = as.character(1:15)),
+         type_description = factor(type_description, levels = type_descriptions_VS01$type_description))
 
 # Create a function to generate a plot for a single site
 plot_site_VS01 <- function(site_name) {
@@ -519,7 +525,10 @@ for (site in site_names_VS01) {
 }
 ```
 
-Damn this looks good! I need to change the x-axis so that also is in numeric order, but that is for tomorrow
+Damn this looks good!
+
+OBS: Some sites have decimal numbers and I do not really know why. The plots should only represent whole numbers. The sites are: Dhar Tichitt, Dia Mara, Korounkorokale, Sadia. 
+
 
 # Interpretation of 02_timelinedata results
 
@@ -536,34 +545,53 @@ The plots are so large that I need to print them in three plots
 
 ```{r, echo=TRUE}
 
-# Load required libraries
-#library(ggplot2)
-#library(dplyr)
-#library(tidyr)
-#library(viridis)
-
 # Assuming your dataset is named 'ceramics_subset' with columns 'site_name' and 'type_category'
 # Count the occurrences of type_category per site
 data_count_VS02 <- ceramics_subset %>%
   group_by(site_name, type_category) %>%
   summarise(count = n(), .groups = 'drop')
 
+# Add a mapping of type_category to type descriptions (example mapping)
+type_descriptions_VS02 <- data.frame(
+  type_category = as.character(1:15),
+  type_description = c("1- Wide-open globular", "2- Open globular", "3- Closed hor. oval", "4- Vertical globular", "5- Closed globular", 
+                       "6- Tightly-closed globular", "7- Open carinated", "8- Wide-open carinated", "9- Vertical ver. oval", "10- Closed ver. oval", 
+                       "11- Tightly-closed ver. oval", "12- Lids (NOT plotted)", "13- Flasks", "14- Bottles", "15- Tellem tripods")
+)
+
+# Ensure the type_category columns are both character columns
+data_count_VS02$type_category <- as.character(data_count_VS02$type_category)
+type_descriptions_VS02$type_category <- as.character(type_descriptions_VS02$type_category)
+
+# Merge descriptions into the data
+data_count_VS02 <- data_count_VS02 %>%
+  left_join(type_descriptions_VS02, by = "type_category")
+
+# Ensure the x-axis (type_category) and legend are in numeric order
+data_count_VS02 <- data_count_VS02 %>%
+  mutate(type_category = factor(type_category, levels = as.character(1:15)),
+         type_description = factor(type_description, levels = type_descriptions_VS02$type_description))
+
 # Pivot the data to wide format: Each type_category becomes a separate column
 data_wide_VS02 <- data_count_VS02 %>%
+  select(-type_description) %>% # Exclude type_description for the wide format
   pivot_wider(names_from = type_category, values_from = count, values_fill = list(count = 0))
 
-# Reshape the data for plotting (long format for ggplot)
+# Reshape the data back to long format for plotting
 data_long_VS02 <- data_wide_VS02 %>%
-  pivot_longer(cols = -site_name, names_to = "type_category", values_to = "count")
+  pivot_longer(cols = -site_name, names_to = "type_category", values_to = "count") %>%
+  mutate(type_category = factor(type_category, levels = as.character(1:15))) # Restore factor order
 
-# Reorder type_category to ensure numeric order in the legend
-data_long_VS02$type_category <- factor(data_long_VS02$type_category, levels = as.character(1:15)) # OBS: 15 colors
+# Merge back the type descriptions for plotting
+data_long_VS02 <- data_long_VS02 %>%
+  left_join(type_descriptions_VS02, by = "type_category")
 
 ```
 
 #Make data tables for three plots
 
 ```{r, echo=TRUE}
+
 # Split the data into three halves based on the site_name
 third_size_VS02 <- floor(n_distinct(data_long_VS02$site_name) / 3)
 site_names_first_third_VS02 <- unique(data_long_VS02$site_name)[1:third_size_VS02]
@@ -580,44 +608,65 @@ data_second_third_VS02 <- data_long_VS02 %>%
 data_third_third_VS02 <- data_long_VS02 %>%
   filter(site_name %in% site_names_third_third_VS02)
 
+# Ensure numeric order for type_category and include descriptions
+data_first_third_VS02 <- data_first_third_VS02 %>%
+  mutate(
+    type_category = factor(type_category, levels = as.character(1:15)),
+    type_description = factor(type_description, levels = type_descriptions_VS02$type_description)
+  )
+
+data_second_third_VS02 <- data_second_third_VS02 %>%
+  mutate(
+    type_category = factor(type_category, levels = as.character(1:15)),
+    type_description = factor(type_description, levels = type_descriptions_VS02$type_description)
+  )
+
+data_third_third_VS02 <- data_third_third_VS02 %>%
+  mutate(
+    type_category = factor(type_category, levels = as.character(1:15)),
+    type_description = factor(type_description, levels = type_descriptions_VS02$type_description)
+  )
+
 # Plot 1: First third of the sites
-plot1_VS02 <- ggplot(data_first_third_VS02, aes(x = site_name, y = count, fill = type_category)) +
+plot1_VS02 <- ggplot(data_first_third_VS02, aes(x = site_name, y = count, fill = type_description)) +
   geom_bar(stat = "identity", position = "dodge") +  # Position bars side by side
-  scale_fill_viridis(discrete = TRUE, option = "D") +  # Viridis palette with 14+ colors
+  scale_fill_viridis(discrete = TRUE, option = "D") +  # Viridis palette
   theme_minimal() +
   labs(
     x = "Site Name",
     y = "Count",
     title = "Count of Vessel Type Categories pr. Site (1/3)",
-    fill = "Type Category"  # Title for the legend
+    fill = "Type Description"  # Updated legend title
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 # Plot 2: Second third of the sites
-plot2_VS02 <- ggplot(data_second_third_VS02, aes(x = site_name, y = count, fill = type_category)) +
+plot2_VS02 <- ggplot(data_second_third_VS02, aes(x = site_name, y = count, fill = type_description)) +
   geom_bar(stat = "identity", position = "dodge") +  # Position bars side by side
-  scale_fill_viridis(discrete = TRUE, option = "D") +  # Viridis palette with 14+ colors
+  scale_fill_viridis(discrete = TRUE, option = "D") +  # Viridis palette
   theme_minimal() +
   labs(
     x = "Site Name",
     y = "Count",
     title = "Count of Vessel Type Categories pr. Site (2/3)",
-    fill = "Type Category"  # Title for the legend
+    fill = "Type Description"  # Updated legend title
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 # Plot 3: Third third of the sites
-plot3_VS02 <- ggplot(data_third_third_VS02, aes(x = site_name, y = count, fill = type_category)) +
+plot3_VS02 <- ggplot(data_third_third_VS02, aes(x = site_name, y = count, fill = type_description)) +
   geom_bar(stat = "identity", position = "dodge") +  # Position bars side by side
-  scale_fill_viridis(discrete = TRUE, option = "D") +  # Viridis palette with 14+ colors
+  scale_fill_viridis(discrete = TRUE, option = "D") +  # Viridis palette
   theme_minimal() +
   labs(
     x = "Site Name",
     y = "Count",
     title = "Count of Vessel Type Categories pr. Site (3/3)",
-    fill = "Type Category"  # Title for the legend
+    fill = "Type Description"  # Updated legend title
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
 ```
 
 #Print the three plots
@@ -663,6 +712,98 @@ OK! These three plots look nice!
       Or does it indicate that the site was more sedentary?
       Or a change in culture?
       Or change in climate to hotter?
+
+------------------------------------------
+# STEP 8: Plot of rim type counts per site
+------------------------------------------
+
+This step explores which rim type is dominant per site. 
+
+It follows the same method as the previous step regarding vessel types.
+
+# STEP 01: Plot each site individually with rim type counts
+
+OBS: "RS01" which is the addition to the data tables I produce refers to "Rim - Site" and data table 01 (ex: data_count_RS01)
+
+```{r, echo=TRUE}
+# Load required libraries
+# library(ggplot2)
+# library(dplyr)
+# library(viridis)
+
+# Count the occurrences of rim_category per site, excluding NA values
+data_count_RS01 <- ceramics_subset %>%
+  filter(!is.na(rim_category)) %>%  # Exclude rows with NA in rim_category
+  group_by(site_name, rim_category) %>%
+  summarise(count = n(), .groups = 'drop')
+
+# Create a mapping of rim_category to descriptions (optional for additional info)
+rim_description_map <- data.frame(
+  rim_category = c("Sr", "Sp", "Sf", "Sb", "Es", "Ec", "Ecc", "Ef", "Efl", "Ep", 
+                   "Et", "Esg", "Emg", "Vs", "Vc", "Oth", "Otc", "Otf", "Ith", 
+                   "Itc", "Itf", "Th", "Tc", "Tf", "Ca", "I", "Y"),
+  rim_description = c("Simple, rounded", "Simple, pointy", "Simple, flattened", 
+                      "Simple, bevelled", "Everted, simple", "Everted, collared", 
+                      "Everted, collared channelled", "Everted, flaring", 
+                      "Everted, flattened", "Everted, protruding", 
+                      "Everted, thickened", "Everted, single groove", 
+                      "Everted, multiple groove", "Vertical, simple", "Vertical, collared", 
+                      "Outward thickened, hinged", "Outward thickened, curved", 
+                      "Outward thickened, flattened", "Inward thickened, hinged",
+                      "Inward thickened, curved", "Inward thickened, flattened",
+                      "Thickened, hinged", "Thickened, curved", "Thickened, flattened",
+                      "Carinated", "Inverted", "Y-rims")
+)
+
+# Ensure `rim_category` columns are character for merging
+data_count_RS01$rim_category <- as.character(data_count_RS01$rim_category)
+rim_description_map$rim_category <- as.character(rim_description_map$rim_category)
+
+# Merge the descriptions with the dataset
+data_count_RS01 <- data_count_RS01 %>%
+  left_join(rim_description_map, by = "rim_category")
+
+# Ensure the x-axis and legend are dynamically ordered based on present rim types
+data_count_RS01 <- data_count_RS01 %>%
+  mutate(
+    rim_category = factor(rim_category, levels = unique(data_count_RS01$rim_category)),
+    rim_description = factor(rim_description, levels = unique(data_count_RS01$rim_description))
+  )
+
+# Create a function to generate a plot for a single site
+plot_site_RS01 <- function(site_name) {
+  site_data <- data_count_RS01 %>% filter(site_name == !!site_name)
+  
+  ggplot(site_data, aes(x = rim_category, y = count, fill = rim_description)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    scale_fill_viridis(discrete = TRUE, option = "D") +
+    theme_minimal() +
+    labs(
+      title = paste("Rim Types at Site:", site_name),
+      x = "Rim Category",
+      y = "Count",
+      fill = "Rim Type"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+
+# Get unique site names
+site_names_RS01 <- unique(data_count_RS01$site_name)
+
+# Generate and print plots for each site
+for (site in site_names_RS01) {
+  print(plot_site_RS01(site))
+}
+
+```
+
+So, this is perfect! I need to interpret it later.
+
+# STEP 02: Plot all the sites in three diagrams with the different vessel types represented
+
+OBS: "RS02" which is the addition to the data tables I produce refers to "Rim - Site" and datatable 02 (ex: data_count_RS02)
+
+
 
 ---------------------------------------------------------
 # STEP ??: Exploring the development of size through time
