@@ -22,7 +22,7 @@ When you click the **Knit** button a document will be generated that includes bo
 To better understand my data I have made a document to explore the data:
 
 - which rim type is most popular overall? -DONE-
-- which rim type is most popular per site?
+- which rim type is most popular per site? -DONE-
 - which rim type is most popular through time?
 
 - which base type is most popular overall? -DONE-
@@ -450,6 +450,7 @@ OBS: Remember that the size categories are based on the "actual_width" of the ve
 
 - As expected, the size cateogry "e" is the least dominant. I this category I would expect to find the very large "wide-open" vessels, and otherwise vessels that are highly specialized like large brewing vessels or special long-term storage vessels (perhaps to be dug into the ground?).
 
+
 ---------------------------------------------
 # STEP 6: Plot of vessel type counts per site
 ---------------------------------------------
@@ -665,8 +666,6 @@ plot3_VS02 <- ggplot(data_third_third_VS02, aes(x = site_name, y = count, fill =
     fill = "Type Description"  # Updated legend title
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-
 ```
 
 #Print the three plots
@@ -799,11 +798,149 @@ for (site in site_names_RS01) {
 
 So, this is perfect! I need to interpret it later.
 
-# STEP 02: Plot all the sites in three diagrams with the different vessel types represented
+# STEP 02: Plot all the sites in three diagrams with the different rim types represented
 
 OBS: "RS02" which is the addition to the data tables I produce refers to "Rim - Site" and datatable 02 (ex: data_count_RS02)
 
+#Prepare data for three plots
 
+```{r, echo=TRUE}
+
+# Assuming your dataset is named 'ceramics_subset' with columns 'site_name' and 'rim_category'
+# Count the occurrences of rim_category per site
+data_count_RS02 <- ceramics_subset %>%
+  group_by(site_name, rim_category) %>%
+  summarise(count = n(), .groups = 'drop')
+
+# Add a mapping of rim_category to type descriptions (example mapping)
+type_descriptions_RS02 <- data.frame(
+  rim_category = c("Sr", "Sp", "Sf", "Sb", "Es", "Ec", "Ecc", "Ef", "Efl", "Ep", 
+                   "Et", "Esg", "Emg", "Vs", "Vc", "Oth", "Otc", "Otf", "Ith", 
+                   "Itc", "Itf", "Th", "Tc", "Tf", "Ca", "I", "Y"),
+  rim_description = c("Simple, rounded", "Simple, pointy", "Simple, flattened", 
+                      "Simple, bevelled", "Everted, simple", "Everted, collared", 
+                      "Everted, collared channelled", "Everted, flaring", 
+                      "Everted, flattened", "Everted, protruding", 
+                      "Everted, thickened", "Everted, single groove", 
+                      "Everted, multiple groove", "Vertical, simple", "Vertical, collared", 
+                      "Outward thickened, hinged", "Outward thickened, curved", 
+                      "Outward thickened, flattened", "Inward thickened, hinged",
+                      "Inward thickened, curved", "Inward thickened, flattened",
+                      "Thickened, hinged", "Thickened, curved", "Thickened, flattened",
+                      "Carinated", "Inverted", "Y-rims")
+)
+
+# Ensure the rim_category columns are both character columns
+#data_count_RS02$rim_category <- as.character(data_count_RS02$rim_category)
+#type_descriptions_RS02$rim_category <- as.character(type_descriptions_RS02$rim_category)
+
+# Merge descriptions into the data
+data_count_RS02 <- data_count_RS02 %>%
+  left_join(type_descriptions_RS02, by = "rim_category")
+
+# Ensure the x-axis (rim_category) and legend are in numeric order
+#data_count_RS02 <- data_count_RS02 %>%
+#  mutate(rim_category = factor(rim_category, levels = as.character(1:27)),
+#         rim_description = factor(rim_description, levels = type_descriptions_RS02$rim_description))
+
+# Pivot the data to wide format: Each rim_category becomes a separate column
+data_wide_RS02 <- data_count_RS02 %>%
+  select(-rim_description) %>% # Exclude type_description for the wide format
+  pivot_wider(names_from = rim_category, values_from = count, values_fill = list(count = 0))
+
+# Reshape the data back to long format for plotting
+data_long_RS02 <- data_wide_RS02 %>%
+  pivot_longer(cols = -site_name, names_to = "rim_category", values_to = "count") %>%
+  mutate(rim_category = factor(rim_category, levels = as.character(1:27))) # Restore factor order
+
+# Merge back the type descriptions for plotting
+data_long_RS02 <- data_long_RS02 %>%
+  left_join(type_descriptions_RS02, by = "rim_category")
+
+```
+
+#Make data tables for three plots
+
+```{r, echo=TRUE}
+
+# Split the data into three halves based on the site_name
+third_size_RS02 <- floor(n_distinct(data_long_RS02$site_name) / 3)
+site_names_first_third_RS02 <- unique(data_long_RS02$site_name)[1:third_size_RS02]
+site_names_second_third_RS02 <- unique(data_long_RS02$site_name)[(third_size_RS02 + 1):(2 * third_size_RS02)]
+site_names_third_third_RS02 <- unique(data_long_RS02$site_name)[(2 * third_size_RS02 + 1):length(unique(data_long_RS02$site_name))]
+
+###Start HERE
+
+# Subset the data for each third of site names
+data_first_third_VS02 <- data_long_VS02 %>%
+  filter(site_name %in% site_names_first_third_VS02)
+
+data_second_third_VS02 <- data_long_VS02 %>%
+  filter(site_name %in% site_names_second_third_VS02)
+
+data_third_third_VS02 <- data_long_VS02 %>%
+  filter(site_name %in% site_names_third_third_VS02)
+
+# Ensure numeric order for type_category and include descriptions
+data_first_third_VS02 <- data_first_third_VS02 %>%
+  mutate(
+    type_category = factor(type_category, levels = as.character(1:15)),
+    type_description = factor(type_description, levels = type_descriptions_VS02$type_description)
+  )
+
+data_second_third_VS02 <- data_second_third_VS02 %>%
+  mutate(
+    type_category = factor(type_category, levels = as.character(1:15)),
+    type_description = factor(type_description, levels = type_descriptions_VS02$type_description)
+  )
+
+data_third_third_VS02 <- data_third_third_VS02 %>%
+  mutate(
+    type_category = factor(type_category, levels = as.character(1:15)),
+    type_description = factor(type_description, levels = type_descriptions_VS02$type_description)
+  )
+
+# Plot 1: First third of the sites
+plot1_VS02 <- ggplot(data_first_third_VS02, aes(x = site_name, y = count, fill = type_description)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Position bars side by side
+  scale_fill_viridis(discrete = TRUE, option = "D") +  # Viridis palette
+  theme_minimal() +
+  labs(
+    x = "Site Name",
+    y = "Count",
+    title = "Count of Vessel Type Categories pr. Site (1/3)",
+    fill = "Type Description"  # Updated legend title
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Plot 2: Second third of the sites
+plot2_VS02 <- ggplot(data_second_third_VS02, aes(x = site_name, y = count, fill = type_description)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Position bars side by side
+  scale_fill_viridis(discrete = TRUE, option = "D") +  # Viridis palette
+  theme_minimal() +
+  labs(
+    x = "Site Name",
+    y = "Count",
+    title = "Count of Vessel Type Categories pr. Site (2/3)",
+    fill = "Type Description"  # Updated legend title
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Plot 3: Third third of the sites
+plot3_VS02 <- ggplot(data_third_third_VS02, aes(x = site_name, y = count, fill = type_description)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Position bars side by side
+  scale_fill_viridis(discrete = TRUE, option = "D") +  # Viridis palette
+  theme_minimal() +
+  labs(
+    x = "Site Name",
+    y = "Count",
+    title = "Count of Vessel Type Categories pr. Site (3/3)",
+    fill = "Type Description"  # Updated legend title
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
 
 ---------------------------------------------------------
 # STEP ??: Exploring the development of size through time
