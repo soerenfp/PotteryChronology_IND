@@ -26,7 +26,7 @@ To better understand my data I have made a document to explore the data:
 - which rim type is most popular through time?
 
 - which base type is most popular overall? -DONE-
-- which base type is most popular per site?
+- which base type is most popular per site? -DONE- (but not as three plots)
 - which base type is most popular through time?
 
 - Which vessel type is most dominant overall? -DONE-
@@ -34,8 +34,12 @@ To better understand my data I have made a document to explore the data:
 - Which vessel type is most dominant through time?
 
 - What size category is dominant overall? -DONE-
-- What size category is dominant per site?
+- What size category is dominant per site? -DONE- (but not as three plots)
 - What size category is dominant through time?
+
+- What attribute category is dominant overall?
+- What attribute category is dominant per site?
+- What attribute category is dominant through time?
 
 -----------------------------------------
 ### STEP 0: Install and load packages ###
@@ -531,10 +535,53 @@ Damn this looks good!
 OBS: Some sites have decimal numbers and I do not really know why. The plots should only represent whole numbers. The sites are: Dhar Tichitt, Dia Mara, Korounkorokale, Sadia. 
 
 
-# Interpretation of 02_timelinedata results
+# Interpretation of the results (from most to least vessel types)
 
-- I need to look closer at the results later
+Akumbu: 10 vessel types are represented, where the dominant is cat. 5, followed by 4 and 6. So, quite many storage vessels at Akumbu
 
+Jenne-jeno: 10 vessel types are represented, where the dominant is cat. 7 the carinated vessels, followed by cat. 5. Also the cat. 1 and 2 vessels are quite numerous, and together the "wide-open" and "open" vessels are very dominant. Does this talk into presenting food and symposiums??? 
+
+Koumbi Saleh: 10 vessel types are represented, where the dominant is cat. 4 followed by 5, 9, 10 (the tall-ovoid types)
+
+T. Doupville/Galia: 10 vessel types are represented where the most dominant is cat. 4 followed by 2, 3, 10. NO vessel cat. 5 (surprise)!
+
+Dangandouloun: 7 vessel types are represented, where the dominant is cat. 15, followed by 5, 4, 6, and 7. Again quite many storage vessels
+
+Dia Shoma: 7 vessel types are represented, where the dominant is cat. 3 and 10.
+
+Gao Saney: 7 vessel types are represented, where the dominant is cat. 2 the open vessels (surprise?), followed by cat. 4 and 5
+
+Winde Koroji: 7 vessel types are represented where the most dominant is cat. 4, followed by 3, 5. 
+
+KNTII: 6 vessel types are represented, where the dominant is cat. 5 followed by 4. 
+
+Karkarichinkat: 6 vessels are represented, where the dominant is cat. 5 followed by 2. Quite many cat. 6 sotrage vessels are also represented
+
+Pegue A: 6 vessel types are represented, where the dominant is cat. 5 followed by 15 and 4 (many Tellem tripods -> site specialization?)
+
+Timbuktu: 6 vessel types are represented, where the dominant is cat. 5 followed by 7 and 4
+
+Kobadi: 5 vessel types are represented, where the dominant is cat. 5 followed by 1 and 4
+
+Ounjougou: 5 vessels are represented, BUT there is a problem that the site is presented from 3 timeslizes. The most dominant is cat. 4
+
+Sadia: 5 vessel types are represented, where the most dominant is cat. 5 followed by 4
+
+Toubel: 5 vessel types are represented where the dominant is cat. 5 followed by 2.
+
+Dia Mara: 4 vessel types are represented, but NO number 5. No dominant vessel type
+
+Dourou-boro: 4 vessel types are represented, where the two dominant are cat. 4 and 5
+
+Dhar Tichitt: 3 vessel types are represented where the dominant is cat. 5
+
+Korounkorokale: 3 vessel types are represented, where the dominant is cat. 4
+
+Mema: 3 vessel types are represented, where the dominant is cat. 5
+
+OBS: I need to divide them into time phases, because right now I only see all the phases represented in one plot. I need to think about that.
+
+So, there is a difference of how many vessel types are represented at the sites, where Akumbu, Jenne-jeno, Koumbi Saleh, and T. Doupville/Galia all have 10 vessel types at the most. What is common from these sites? I think they are all hubs and "urbanized" but is there something else in common???
 
 # STEP 02: Plot all the sites in three diagrams with the different vessel types represented
 
@@ -719,6 +766,17 @@ OK! These three plots look nice!
 This step explores which rim type is dominant per site. 
 
 It follows the same method as the previous step regarding vessel types.
+
+# STEP 0: View rim types in the spreadsheet
+
+This step is just to see if there are typos or other
+
+```{r, echo=TRUE}
+# View unique rim types
+unique_rim_types <- unique(ceramics_subset$rim_category)
+print(unique_rim_types)
+```
+Looks fine!
 
 # STEP 01: Plot each site individually with rim type counts
 
@@ -918,6 +976,7 @@ plot1_RS02 <- ggplot(data_first_third_RS02, aes(x = site_name, y = count, fill =
 
 #Print the plot
 plot1_RS02
+
 ```
 
 
@@ -960,6 +1019,295 @@ plot3_RS02
 ```
 Ok, these plots need adjustments, but I now have a full plot of the rims pr site. I have some NAs from Karkarichinkat that I need to check out. Second, I need to decide if I really need the legend here, or if I can change it to the abbrivations
 
+```{r, echo=TRUE}
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(ggplot2)
+library(viridis)
+
+# Clean up rim_category in ceramics_subset: remove extra spaces and convert to upper case
+ceramics_subset <- ceramics_subset %>%
+  mutate(rim_category = toupper(trimws(rim_category)))
+
+# Remove rows where rim_category is NA and count occurrences per site
+data_count_RS02 <- ceramics_subset %>%
+  filter(!is.na(rim_category)) %>%  
+  group_by(site_name, rim_category) %>%
+  summarise(count = n(), .groups = "drop")
+
+# Create a mapping of rim_category to rim descriptions (using abbreviations) and clean the keys
+rim_descriptions_RS02 <- data.frame(
+  rim_category = toupper(c("Sr", "Sp", "Sf", "Sb", "Es", "Ec", "Ecc", "Ef", "Efl", "Ep", 
+                           "Et", "Esg", "Emg", "Vs", "Vc", "Oth", "Otc", "Otf", "Ith", 
+                           "Itc", "Itf", "Th", "Tc", "Tf", "Ca", "I", "Y")),
+  rim_description = c("Simple, rounded", "Simple, pointy", "Simple, flattened", 
+                      "Simple, bevelled", "Everted, simple", "Everted, collared", 
+                      "Everted, collared channelled", "Everted, flaring", 
+                      "Everted, flattened", "Everted, protruding", 
+                      "Everted, thickened", "Everted, single groove", 
+                      "Everted, multiple groove", "Vertical, simple", "Vertical, collared", 
+                      "Outward thickened, hinged", "Outward thickened, curved", 
+                      "Outward thickened, flattened", "Inward thickened, hinged",
+                      "Inward thickened, curved", "Inward thickened, flattened",
+                      "Thickened, hinged", "Thickened, curved", "Thickened, flattened",
+                      "Carinated", "Inverted", "Y-rims"),
+  stringsAsFactors = FALSE
+)
+
+# Ensure both data frames have rim_category as character
+data_count_RS02 <- data_count_RS02 %>% mutate(rim_category = as.character(rim_category))
+rim_descriptions_RS02$rim_category <- as.character(rim_descriptions_RS02$rim_category)
+
+# Merge descriptions into the data using rim_category as the key
+data_count_RS02 <- data_count_RS02 %>%
+  left_join(rim_descriptions_RS02, by = "rim_category")
+
+# Check the first few rows to ensure the join worked
+print(head(data_count_RS02))
+
+# Set factor levels based on the mapping order (using the abbreviations)
+data_count_RS02 <- data_count_RS02 %>%
+  mutate(
+    rim_category = factor(rim_category, levels = rim_descriptions_RS02$rim_category),
+    rim_description = factor(rim_description, levels = rim_descriptions_RS02$rim_description)
+  )
+
+# (Optional) Pivot to wide and back if needed for other analyses...
+# For plotting, we can use data_count_RS02 directly, or if you have a split dataset,
+# make sure it comes from this cleaned version.
+
+```
+
+# prepare three plots
+
+```{r, echo=TRUE}
+# Split the data into three groups based on site_name
+# (We assume site_name ordering is the desired split)
+total_sites <- length(unique(data_long_RS02$site_name))
+third_size_RS02 <- floor(total_sites / 3)
+site_names_first_third_RS02 <- unique(data_long_RS02$site_name)[1:third_size_RS02]
+site_names_second_third_RS02 <- unique(data_long_RS02$site_name)[(third_size_RS02 + 1):(2 * third_size_RS02)]
+site_names_third_third_RS02 <- unique(data_long_RS02$site_name)[(2 * third_size_RS02 + 1):total_sites]
+
+# Subset the data for each group
+data_first_third_RS02 <- data_long_RS02 %>%
+  filter(site_name %in% site_names_first_third_RS02)
+
+data_second_third_RS02 <- data_long_RS02 %>%
+  filter(site_name %in% site_names_second_third_RS02)
+
+data_third_third_RS02 <- data_long_RS02 %>%
+  filter(site_name %in% site_names_third_third_RS02)
+
+```
+
+#Create the three plots
+
+```{r, echo=TRUE}
+# Create Plot 1: First third of the sites
+plot1a_RS02 <- ggplot(data_first_third_RS02, aes(x = site_name, y = count, fill = rim_category)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_viridis(discrete = TRUE, option = "D") +
+  theme_minimal() +
+  labs(
+    x = "Site Name",
+    y = "Count",
+    title = "Count of Rim Categories per Site (1/3)",
+    fill = "Rim Type"  # Legend will display abbreviations
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Create Plot 2: Second third of the sites
+plot2a_RS02 <- ggplot(data_second_third_RS02, aes(x = site_name, y = count, fill = rim_category)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_viridis(discrete = TRUE, option = "D") +
+  theme_minimal() +
+  labs(
+    x = "Site Name",
+    y = "Count",
+    title = "Count of Rim Categories per Site (2/3)",
+    fill = "Rim Type"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Create Plot 3: Third third of the sites
+plot3a_RS02 <- ggplot(data_third_third_RS02, aes(x = site_name, y = count, fill = rim_category)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_viridis(discrete = TRUE, option = "D") +
+  theme_minimal() +
+  labs(
+    x = "Site Name",
+    y = "Count",
+    title = "Count of Rim Categories per Site (3/3)",
+    fill = "Rim Type"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+#Print plot 1
+
+```{r, echo=TRUE}
+plot1a_RS02
+```
+
+#Print plot 2
+
+```{r, echo=TRUE}
+plot2a_RS02
+```
+
+#Print plot 3
+
+```{r, echo=TRUE}
+plot3a_RS02
+```
+Ok, now I got the three plots with a proper legend. I am not sure if I can use it because there is too much data in one plot, and you cannot really differentiate the colors.. Perhaps I need more clear colours or something, but that is for later..
+
+-------------------------------------
+# STEP 9: Plot of base types per site
+-------------------------------------
+
+In the following I will explore which base types are dominant per site.
+
+I use the abbrivation BS01 for Base - Site and the number is the database I create
+
+```{r, echo=TRUE}
+
+# Load required libraries
+# library(ggplot2)
+# library(dplyr)
+# library(viridis)
+
+# Count the occurrences of rim_category per site, excluding NA values
+data_count_BS01 <- ceramics_subset %>%
+  filter(!is.na(base_category)) %>%  # Exclude rows with NA in rim_category
+  group_by(site_name, base_category) %>%
+  summarise(count = n(), .groups = 'drop')
+
+# Create a mapping of base_category to descriptions (optional for additional info)
+base_description_map <- data.frame(
+  base_category = c("Bf", "Br", "Bpe", "Bl", "Bc", "Bpo", "Sp", "Bro", "Bt"),
+  base_description = c("Bases, flat", "Bases, ring", "Bases, pedestal", 
+                      "Bases, legged", "Bases, concave", "Bases, pointy", "Special", 
+                      "Bases, rounded", "Bases, tripod")
+)
+
+# Ensure `base_category` columns are character for merging
+data_count_BS01$base_category <- as.character(data_count_BS01$base_category)
+base_description_map$base_category <- as.character(base_description_map$base_category)
+
+# Merge the descriptions with the dataset
+data_count_BS01 <- data_count_BS01 %>%
+  left_join(base_description_map, by = "base_category")
+
+# Ensure the x-axis and legend are dynamically ordered based on present base types
+data_count_BS01 <- data_count_BS01 %>%
+  mutate(
+    base_category = factor(base_category, levels = unique(data_count_BS01$base_category)),
+    base_description = factor(base_description, levels = unique(data_count_BS01$base_description))
+  )
+
+# Create a function to generate a plot for a single site
+plot_site_BS01 <- function(site_name) {
+  site_data <- data_count_BS01 %>% filter(site_name == !!site_name)
+  
+  ggplot(site_data, aes(x = base_category, y = count, fill = base_description)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    scale_fill_viridis(discrete = TRUE, option = "D") +
+    theme_minimal() +
+    labs(
+      title = paste("Base Types at Site:", site_name),
+      x = "Base Category",
+      y = "Count",
+      fill = "Base Type"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+
+# Get unique site names
+site_names_BS01 <- unique(data_count_BS01$site_name)
+
+# Generate and print plots for each site
+for (site in site_names_BS01) {
+  print(plot_site_BS01(site))
+}
+```
+Damn I'm good!
+
+OBS: I will not try to put all the data into three diagrams before I know I will use it!
+
+---------------------------------------
+# STEP 10: Plot of vessel size per site
+---------------------------------------
+
+In the following I will explore which size cateogries are dominant per site
+
+OBS I will use the SS abbreviations for Size - Site and then followed by a data number -> ex-SS01
+
+```{r, echo=TRUE}
+
+# Load required libraries
+# library(ggplot2)
+# library(dplyr)
+# library(viridis)
+
+# Count the occurrences of size_category per site, excluding NA values
+data_count_SS01 <- ceramics_subset %>%
+  filter(!is.na(size_category)) %>%  # Exclude rows with NA in size_category
+  group_by(site_name, size_category) %>%
+  summarise(count = n(), .groups = 'drop')
+
+# Create a mapping of base_category to descriptions (optional for additional info)
+size_description_map <- data.frame(
+  size_category = c("a", "b", "c", "d", "e"),
+  size_description = c("<14 cm", "15-24 cm", "25-34 cm", "35-44 cm", ">45 cm")
+)
+
+# Ensure `size_category` columns are character for merging
+data_count_SS01$size_category <- as.character(data_count_SS01$size_category)
+size_description_map$size_category <- as.character(size_description_map$size_category)
+
+# Merge the descriptions with the dataset
+data_count_SS01 <- data_count_SS01 %>%
+  left_join(size_description_map, by = "size_category")
+
+# Ensure the x-axis and legend are dynamically ordered based on present base types
+data_count_SS01 <- data_count_SS01 %>%
+  mutate(
+    size_category = factor(size_category, levels = unique(data_count_SS01$size_category)),
+    size_description = factor(size_description, levels = unique(data_count_SS01$size_description))
+  )
+
+# Create a function to generate a plot for a single site
+plot_site_SS01 <- function(site_name) {
+  site_data <- data_count_SS01 %>% filter(site_name == !!site_name)
+  
+  ggplot(site_data, aes(x = size_category, y = count, fill = size_description)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    scale_fill_viridis(discrete = TRUE, option = "D") +
+    theme_minimal() +
+    labs(
+      title = paste("Size Categories at Site:", site_name),
+      x = "Size Category",
+      y = "Count",
+      fill = "Size Type"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+
+# Get unique site names
+site_names_SS01 <- unique(data_count_SS01$site_name)
+
+# Generate and print plots for each site
+for (site in site_names_SS01) {
+  print(plot_site_SS01(site))
+}
+```
+Damn I'm good!
+
+OBS: I just noticed that the colors are not consistent, so the last category is always yellow for an example. I need to change this so the colors and types are consistent. This applies to all my previous plots!
+
 ---------------------------------------------------------
 # STEP ??: Exploring the development of size through time
 ---------------------------------------------------------
@@ -995,6 +1343,8 @@ For BC: -250 to -100: Midpoint = (−250+ −100)/2= -175
 For AD: 150 to 300: Midpoint = (150+300)/2= 225
 
 This will provide a single value for each vessel's time period, making it easier to analyze trends.
+
+#OBS: All the above has been done, and I have uploaded the results as a spredsheet named "03_timelinedata"
 
 - 4. Visualize Vessel Sizes Through Time
 
