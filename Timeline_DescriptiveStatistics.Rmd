@@ -530,7 +530,7 @@ for (site in site_names_VS01) {
 }
 ```
 
-Damn this looks good!
+Damn this looks good! But you should determine a specific colour to each vessel shape. Right now it changes from one plot to the next
 
 OBS: Some sites have decimal numbers and I do not really know why. The plots should only represent whole numbers. The sites are: Dhar Tichitt, Dia Mara, Korounkorokale, Sadia. 
 
@@ -854,7 +854,7 @@ for (site in site_names_RS01) {
 
 ```
 
-So, this is perfect! I need to interpret it later.
+So, this is perfect! I need to interpret it later. You need to determine a specific colour to each rim type. Right now it changes in the plots. 
 
 # STEP 02: Plot all the sites in three diagrams with the different rim types represented
 
