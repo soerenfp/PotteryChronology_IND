@@ -37,7 +37,7 @@ To better understand my data I have made a document to explore the data:
 - What size category is dominant per site? -DONE- (but not as three plots)
 - What size category is dominant through time?
 
-- What attribute category is dominant overall?
+- What attribute category is dominant overall? -DONE-
 - What attribute category is dominant per site?
 - What attribute category is dominant through time?
 
@@ -96,6 +96,8 @@ library(viridis)
 
 # Load data
 
+The data is named data_measurements01.xlsx from the previous step. 
+
 ```{r, echo=TRUE}
 
 # Load your dataset from an Excel file
@@ -130,6 +132,35 @@ So, now I created a data set "ceramics_subset" of the columns noted above (NOT: 
 ---------------------------------------------------------
 
 ```{r, echo=TRUE}
+# Used libraries
+#library(ggplot2)
+
+# Barplot of 'Counts per Type Category' 
+
+# Drop NAs and count data points per type category
+summary_counts_vessel <- ceramics_data %>%
+  drop_na(type_category) %>%
+  count(type_category, name = "Count")
+
+# Calculate total number of data points (all rows after removing NAs)
+total_points_vessel <- nrow(ceramics_data %>% drop_na(type_category))
+
+# Plot the counts with total as a label inside the plot
+ggplot(summary_counts_vessel, aes(x = type_category, y = Count)) +
+  geom_bar(stat = "identity") +
+  annotate("text", x = Inf, y = Inf, label = paste("Total:", total_points_vessel),
+           hjust = 1.1, vjust = 2, size = 5, fontface = "bold", color = "black") +
+  labs(
+    x = "vessel type Category",
+    y = "Count",
+    title = "Counts per Type Category"
+  ) +
+  theme_minimal()
+
+```
+Very nice!
+
+```{r, echo=TRUE}
 # Used libraries:
 #library(ggplot2)
 #library(cowplot)
@@ -140,8 +171,10 @@ So, now I created a data set "ceramics_subset" of the columns noted above (NOT: 
 
 # Create a data frame to count the number of data points for each vessel type
 vessel_counts <- data.frame(table(ceramics_subset$type_category))   #make a data set of type_category and the counts per category
-
 colnames(vessel_counts) <- c("type_category", "count")    #name the columns in vessel_counts
+
+# Calculate total number of data points
+total_vessels <- sum(vessel_counts$count)
 
 # Create the bar plot of 'Data points per vessel type'
 bar_plot_vessel <- ggplot(vessel_counts, aes(x = as.factor(type_category), y = count)) +
@@ -149,10 +182,14 @@ bar_plot_vessel <- ggplot(vessel_counts, aes(x = as.factor(type_category), y = c
   labs(title = "Number of Data Points per Vessel Type",
        x = "Vessel Type",
        y = "Number of Data Points") +
+  annotate("text", 
+           x = Inf, y = Inf, 
+           label = paste("Total =", total_vessels), 
+           hjust = 1.1, vjust = 2, size = 4, fontface = "bold") +
   theme_minimal() +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels for better visibility
-    plot.margin = margin(10, 10, 10, 10)  # Adjust plot margins if needed
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.margin = margin(10, 10, 10, 10)
   )
 
 # Legend table for vessel type descriptions
@@ -168,14 +205,14 @@ legend_table_vessel <- data.frame(
 
 # Convert the legend table to a plot with adjusted margins
 legend_plot_vessel <- ggplot(legend_table_vessel, aes(x = "", y = type_category, label = paste(type_category, "=", Description))) +
-  geom_text(hjust = 0, size = 3) +  # Reduced text size
+  geom_text(hjust = 0, size = 3) +
   theme_void() +
   theme(
-    plot.margin = margin(5, 20, 5, -140)  # Adjusted margins for readability
+    plot.margin = margin(5, 20, 5, -140)
   )
 
-# Arrange the bar plot and the legend side by side with adjusted widths
-cowplot::plot_grid(bar_plot_vessel, legend_plot_vessel, ncol = 2, rel_widths = c(3, 1.5))  # Reduced legend width
+# Arrange the bar plot and the legend side by side
+cowplot::plot_grid(bar_plot_vessel, legend_plot_vessel, ncol = 2, rel_widths = c(3, 1.5))
 
 ```
 This plot looks nice! It includes all the 611 vessels.
@@ -204,28 +241,35 @@ NIck (DONE): You need a barplot here, change geom_boxplot() to geom_bar()
 -NICK/me: this also points to the conservationism of the pottery, in where the oldest forms are also the most numerous. They do not change the pottery types so often!
 
 ---------------------------------------------------------------
-# STEP 3: Boxplot of how many datapoint I have per rim category
+# STEP 3: Barplot of how many datapoint I have per rim category
 ---------------------------------------------------------------
 
 ```{r, echo=TRUE}
 # Used libraries
 #library(ggplot2)
 
-# Boxplot of 'Counts per Rim Category' 
+# Barplot of 'Counts per Rim Category' 
 
-#ggplot(ceramics_data_typesplit, aes(x = rim_category)) +
-  #geom_bar() +
-  #labs(x = "Rim Category", y = "Count", title = "Counts per Rim Category") +
-  #theme_minimal()
+# Drop NAs and count data points per rim category
+summary_counts_rim <- ceramics_data %>%
+  drop_na(rim_category) %>%
+  count(rim_category, name = "Count")
 
-#NIck: drop the NAs before plotting
+# Calculate total number of data points (all rows after removing NAs)
+total_points_rim <- nrow(ceramics_data %>% drop_na(rim_category))
 
-ceramics_data %>% 
-drop_na(rim_category) %>% 
-ggplot(aes(x = rim_category)) +
-  geom_bar() +
-  labs(x = "Rim Category", y = "Count", title = "Counts per Rim Category") +
+# Plot the counts with total as a label inside the plot
+ggplot(summary_counts_rim, aes(x = rim_category, y = Count)) +
+  geom_bar(stat = "identity") +
+  annotate("text", x = Inf, y = Inf, label = paste("Total:", total_points_rim),
+           hjust = 1.1, vjust = 2, size = 5, fontface = "bold", color = "black") +
+  labs(
+    x = "Rim Category",
+    y = "Count",
+    title = "Counts per Rim Category"
+  ) +
   theme_minimal()
+
 ```
 
 Let's try to make the plot nicer
@@ -240,16 +284,23 @@ Let's try to make the plot nicer
 rim_counts <- data.frame(table(ceramics_data$rim_category))
 colnames(rim_counts) <- c("rim_category", "Count")
 
-# Create the bar plot of 'Data points per vessel type'
+# Calculate total number of rim data points
+total_rims <- sum(rim_counts$Count)
+
+# Create the bar plot of 'Data points per vessel type' with total count
 bar_plot_rim <- ggplot(rim_counts, aes(x = as.factor(rim_category), y = Count)) +
   geom_col(fill = "lightblue") +
   labs(title = "Number of Data Points per Rim Type",
        x = "Rim Type",
        y = "Number of Data Points") +
+  annotate("text", 
+           x = Inf, y = Inf, 
+           label = paste("Total =", total_rims), 
+           hjust = 1.1, vjust = 2, size = 4, fontface = "bold") +
   theme_minimal() +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels for better visibility
-    plot.margin = margin(10, 10, 10, 10)  # Adjust plot margins if needed
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.margin = margin(10, 10, 10, 10)
   )
 
 # Legend table for vessel type descriptions
@@ -273,14 +324,14 @@ legend_table_rim <- data.frame(
 
 # Convert the legend table to a plot with adjusted margins and abbreviations
 legend_plot_rim <- ggplot(legend_table_rim, aes(x = "", y = Rim_Type, label = paste(Abbreviation, "=", Description))) +
-  geom_text(hjust = 0, size = 3) +  # Reduced text size
+  geom_text(hjust = 0, size = 3) +
   theme_void() +
   theme(
-    plot.margin = margin(5, 20, 5, -140)  # Adjusted margins for readability
+    plot.margin = margin(5, 20, 5, -140)
   )
 
 # Arrange the bar plot and the legend side by side with adjusted widths
-cowplot::plot_grid(bar_plot_rim, legend_plot_rim, ncol = 2, rel_widths = c(3, 1.5))  # Reduced legend width
+cowplot::plot_grid(bar_plot_rim, legend_plot_rim, ncol = 2, rel_widths = c(3, 1.5))
 
 ```
 So, this looks damn good! 
@@ -304,6 +355,53 @@ So, this looks damn good!
 - the 9th highest category is the Tc (Thickened, curved) category, where this is for grapping or reinforcing the vessel. 
 
 - The rest of the categories are quite evenly represented!
+
+I want to collapse the different rim categories into more manageable categories. 
+
+```{r, echo=TRUE}
+
+# Collapse rim categories by first letter
+ceramics_data_collapsed <- ceramics_data %>%
+  filter(!is.na(rim_category)) %>%
+  mutate(rim_group = case_when(
+    grepl("^S", rim_category) ~ "Simple rims",
+    grepl("^E", rim_category) ~ "Everted rims",
+    grepl("^V", rim_category) ~ "Vertical rims",
+    grepl("^O", rim_category) ~ "Outwards th. rims",
+    grepl("^I", rim_category) ~ "Inwards th. rims",
+    grepl("^T", rim_category) ~ "Thickened rims",
+    grepl("^C", rim_category) ~ "Carinated rims",
+    rim_category == "Y" ~ "Y-rims",
+    TRUE ~ "Other"
+  ))  %>%
+  group_by(rim_group) %>%
+  summarise(Count = n(), .groups = "drop")
+
+# Total number of rim data points
+total_rims <- sum(rim_counts_collapsed$Count)
+
+# Bar plot without legend
+bar_plot_rim_collapsed <- ggplot(rim_counts_collapsed, aes(x = rim_group, y = Count)) +
+  geom_col(fill = "lightblue") +
+  labs(title = "Number of Data Points per Collapsed Rim Type",
+       x = "Rim Group",
+       y = "Number of Data Points") +
+  annotate("text", 
+           x = Inf, y = Inf, 
+           label = paste("Total =", total_rims), 
+           hjust = 1.1, vjust = 2, size = 4, fontface = "bold") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.margin = margin(10, 10, 10, 10),
+    legend.position = "none"  # Remove the legend
+  )
+
+bar_plot_rim_collapsed
+
+```
+
+Collapsing the data might help understand the rim types!
 
 ----------------------------------------------------------------
 # STEP 4: Boxplot of how many datapoint I have per base category
@@ -334,23 +432,30 @@ Let's try to make the plot nicer
 #library(ggplot2)
 #library(cowplot)
 
-# Create a data frame to count the number of data points for each vessel type
+# Create a data frame to count the number of data points for each base type
 base_counts <- data.frame(table(ceramics_subset$base_category))
 colnames(base_counts) <- c("base_category", "Count")
 
-# Create the bar plot of 'Data points per vessel type'
+# Calculate total number of base data points
+total_base <- sum(base_counts$Count)
+
+# Create the bar plot of 'Data points per base type' with total count
 bar_plot_base <- ggplot(base_counts, aes(x = as.factor(base_category), y = Count)) +
   geom_col(fill = "lightblue") +
   labs(title = "Number of Data Points per Base Type",
        x = "Base Type",
        y = "Number of Data Points") +
+  annotate("text",
+           x = Inf, y = Inf,
+           label = paste("Total =", total_base),
+           hjust = 1.1, vjust = 2, size = 4, fontface = "bold") +
   theme_minimal() +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels for better visibility
-    plot.margin = margin(10, 10, 10, 10)  # Adjust plot margins if needed
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.margin = margin(10, 10, 10, 10)
   )
 
-# Legend table for vessel type descriptions
+# Legend table for base type descriptions
 legend_table_base <- data.frame(
   Base_Type = 1:9,
   Abbreviation = c("Bf", "Br", "Bpe", "Bl", "Bc", "Bpo", "Sp", "Bro", "Bt"),
@@ -359,16 +464,16 @@ legend_table_base <- data.frame(
                   "Bases, rounded", "Bases, tripod")
 )
 
-# Convert the legend table to a plot with adjusted margins and abbreviations
+# Convert the legend table to a plot with adjusted margins
 legend_plot_base <- ggplot(legend_table_base, aes(x = "", y = Base_Type, label = paste(Abbreviation, "=", Description))) +
-  geom_text(hjust = 0, size = 3) +  # Reduced text size
+  geom_text(hjust = 0, size = 3) +
   theme_void() +
   theme(
-    plot.margin = margin(5, 20, 5, -140)  # Adjusted margins for readability
+    plot.margin = margin(5, 20, 5, -140)
   )
 
-# Arrange the bar plot and the legend side by side with adjusted widths
-cowplot::plot_grid(bar_plot_base, legend_plot_base, ncol = 2, rel_widths = c(3, 1.5))  # Reduced legend width
+# Arrange the bar plot and the legend side by side
+cowplot::plot_grid(bar_plot_base, legend_plot_base, ncol = 2, rel_widths = c(3, 1.5))
 
 ```
 So, this plot looks nice! It only includes the vessels that have a registered base, so NA's are excluded!
@@ -409,39 +514,47 @@ Let's try to make the plot a little nicer
 #library(ggplot2)
 #library(cowplot)
 
-# Create a data frame to count the number of data points for each vessel type
+# Create a data frame to count the number of data points for each size category
 size_counts <- data.frame(table(ceramics_subset$size_category))
 colnames(size_counts) <- c("size_category", "Count")
 
-# Create the bar plot of 'Data points per vessel type'
+# Calculate total number of size data points
+total_size <- sum(size_counts$Count)
+
+# Create the bar plot of 'Data points per size category' with total count
 bar_plot_size <- ggplot(size_counts, aes(x = as.factor(size_category), y = Count)) +
   geom_col(fill = "lightblue") +
-  labs(title = "Number of Data Points per Size category",
+  labs(title = "Number of Data Points per Size Category",
        x = "Size Category",
        y = "Number of Data Points") +
+  annotate("text",
+           x = Inf, y = Inf,
+           label = paste("Total =", total_size),
+           hjust = 1.1, vjust = 2, size = 4, fontface = "bold") +
   theme_minimal() +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels for better visibility
-    plot.margin = margin(10, 10, 10, 10)  # Adjust plot margins if needed
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.margin = margin(10, 10, 10, 10)
   )
 
-# Legend table for vessel type descriptions
+# Legend table for size type descriptions
 legend_table_size <- data.frame(
   Size_Type = 1:5,
   Abbreviation = c("a", "b", "c", "d", "e"),
-  Description = c("<14 cm", "15-24.9 cm", "25-34.9 cm", "35-44.9 cm", ">45 cm")
+  Description = c("<14.9 cm", "15-24.9 cm", "25-34.9 cm", "35-44.9 cm", ">45 cm")
 )
 
 # Convert the legend table to a plot with adjusted margins and abbreviations
 legend_plot_size <- ggplot(legend_table_size, aes(x = "", y = Size_Type, label = paste(Abbreviation, "=", Description))) +
-  geom_text(hjust = 0, size = 3) +  # Reduced text size
+  geom_text(hjust = 0, size = 3) +
   theme_void() +
   theme(
-    plot.margin = margin(5, 20, 5, -140)  # Adjusted margins for readability
+    plot.margin = margin(5, 20, 5, -140)
   )
 
-# Arrange the bar plot and the legend side by side with adjusted widths
-cowplot::plot_grid(bar_plot_size, legend_plot_size, ncol = 2, rel_widths = c(3, 1.5))  # Reduced legend width
+# Arrange the bar plot and the legend side by side
+cowplot::plot_grid(bar_plot_size, legend_plot_size, ncol = 2, rel_widths = c(3, 1.5))
+
 
 ```
 So, this looks very nice!
@@ -488,43 +601,47 @@ Let's make the plot nicer
 #library(ggplot2)
 #library(cowplot)
 
-# Create a data frame to count the number of data points for each attribute
+# Create a data frame to count the number of data points for each vessel type
 attribute_counts <- data.frame(table(ceramics_subset$attributes))
 colnames(attribute_counts) <- c("attributes", "Count")
 
-# Ensure 'attributes' is treated as a factor for correct order in the plot
-attribute_counts$attributes <- factor(attribute_counts$attributes, 
-                                      levels = legend_table_attribute$Abbreviation)
+# Calculate total number of attribute data points
+total_attributes <- sum(attribute_counts$Count)
 
-# Create the bar plot of 'Data points per attribute category'
-bar_plot_attribute <- ggplot(attribute_counts, aes(x = attributes, y = Count)) +
+# Create the bar plot of 'Data points per attribute' with total count
+bar_plot_attribute <- ggplot(attribute_counts, aes(x = as.factor(attributes), y = Count)) +
   geom_col(fill = "lightblue") +
   labs(title = "Number of Data Points per Attribute Category",
        x = "Attribute Category",
        y = "Number of Data Points") +
+  annotate("text",
+           x = Inf, y = Inf,
+           label = paste("Total =", total_attributes),
+           hjust = 1.1, vjust = 2, size = 4, fontface = "bold") +
   theme_minimal() +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1),
     plot.margin = margin(10, 10, 10, 10)
   )
 
-# Legend table for attribute descriptions
+# Legend table for vessel type descriptions
 legend_table_attribute <- data.frame(
   Attribute_Type = 1:5,
   Abbreviation = c("H", "Sp", "St", "K", "Pl"),
   Description = c("Handles", "Spouts", "Steamers", "Knobs", "Plastic Band")
 )
 
-# Convert the legend table to a plot
-legend_plot_attribute <- ggplot(legend_table_attribute, 
-                                aes(x = "", y = Attribute_Type, 
-                                    label = paste(Abbreviation, "=", Description))) +
+# Convert the legend table to a plot with adjusted margins and abbreviations
+legend_plot_attribute <- ggplot(legend_table_attribute, aes(x = "", y = Attribute_Type, label = paste(Abbreviation, "=", Description))) +
   geom_text(hjust = 0, size = 3) +
   theme_void() +
-  theme(plot.margin = margin(5, 20, 5, -140))
+  theme(
+    plot.margin = margin(5, 20, 5, -140)
+  )
 
-# Combine bar plot and legend side by side
+# Arrange the bar plot and the legend side by side with adjusted widths
 cowplot::plot_grid(bar_plot_attribute, legend_plot_attribute, ncol = 2, rel_widths = c(3, 1.5))
+
 
 ```
 Looks perfect!
