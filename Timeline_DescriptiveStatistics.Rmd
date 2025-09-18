@@ -360,8 +360,8 @@ I want to collapse the different rim categories into more manageable categories.
 
 ```{r, echo=TRUE}
 
-# Collapse rim categories by first letter
-ceramics_data_collapsed <- ceramics_data %>%
+# Collapse rim categories by first letter and count them
+rim_counts_collapsed <- ceramics_data %>%
   filter(!is.na(rim_category)) %>%
   mutate(rim_group = case_when(
     grepl("^S", rim_category) ~ "Simple rims",
@@ -373,7 +373,7 @@ ceramics_data_collapsed <- ceramics_data %>%
     grepl("^C", rim_category) ~ "Carinated rims",
     rim_category == "Y" ~ "Y-rims",
     TRUE ~ "Other"
-  ))  %>%
+  )) %>%
   group_by(rim_group) %>%
   summarise(Count = n(), .groups = "drop")
 
@@ -394,7 +394,7 @@ bar_plot_rim_collapsed <- ggplot(rim_counts_collapsed, aes(x = rim_group, y = Co
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1),
     plot.margin = margin(10, 10, 10, 10),
-    legend.position = "none"  # Remove the legend
+    legend.position = "none"
   )
 
 bar_plot_rim_collapsed
@@ -1175,7 +1175,7 @@ plot1_RS02
 
 ```
 
-
+You need to make the legend smaller! Use the abrivations 
 
 ```{r, echo=TRUE}
 # Plot 2: Second third of the sites
@@ -1563,4 +1563,48 @@ ggplot(data, aes(x = midpoint, y = vessel_size)) +
 Look for patterns, such as increases or decreases in size over time or abrupt changes during specific periods.
 
 Use color or shapes to differentiate vessel types, rim categories, or other attributes to add depth to the analysis.
+
+---------------------------
+# Mean, median, range, SD #
+---------------------------
+
+Calculating the mean + median + range + Standard Deviation (SD) for:
+
+- actual diameter (orifice)
+- actual height
+- actual width
+
+Mean: the mean, or average, is calculated by summing all the values in a dataset and then dividing that total by the number of values. It represents a central value of a dataset and is the most common measure of central tendency
+
+Median: A median is the middle value in a dataset that has been arranged in order from smallest to largest. It divides the dataset in half, with 50% of the values being equal to or smaller than the median and 50% being equal to or larger than the median. To find the median, first sort the data, then identify the middle number for an odd number of data points, or calculate the average of the two middle numbers for an even number of data points. 
+
+Range: In mathematics, the term "range" has two primary meanings: in statistics, it is the difference between the highest and lowest values in a dataset - To find the statistical range, you identify the largest and smallest numbers in a set and subtract the smallest from the largest.
+
+SD: A standard deviation is a statistical measure of the amount of variation or dispersion within a set of data values, indicating how much individual data points typically deviate from the mean (average) of the set. A low standard deviation signifies that the data points tend to be close to the mean, while a high standard deviation indicates that the data points are spread out over a wider range of values.  
+
+```{r, echo=TRUE}
+
+# Descriptive statistics for key numeric variables
+numeric_vars <- c("actual_width", "actual_diameter", "actual_height")
+
+descriptive_stats <- ceramics_data %>%
+  select(all_of(numeric_vars)) %>%
+  summarise(
+    across(everything(),
+           list(
+             mean = ~mean(.x, na.rm = TRUE),
+             median = ~median(.x, na.rm = TRUE),
+             min = ~min(.x, na.rm = TRUE),
+             max = ~max(.x, na.rm = TRUE),
+             sd = ~sd(.x, na.rm = TRUE)
+           ),
+           .names = "{.col}_{.fn}"
+    )
+  )
+
+descriptive_stats
+
+```
+
+Interpretation:
 
