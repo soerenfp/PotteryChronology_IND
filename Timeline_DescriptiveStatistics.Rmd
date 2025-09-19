@@ -103,6 +103,10 @@ The data is named data_measurements01.xlsx from the previous step.
 # Load your dataset from an Excel file
 ceramics_data <- read_excel("analysis/data/raw_data/data_measurements_01.xlsx")
 
+#Make 0.0 values into NAs for the actual_width, actual_diameter, and actual_height columns
+ceramics_data <- ceramics_data %>%
+  mutate(across(c(actual_width, actual_diameter, actual_height), ~na_if(.x, 0)))
+
 # Ensure your Excel file has columns: actual_diameter, actual_width, actual_height
 # Check the first few rows of your data
 head(ceramics_data)
@@ -360,7 +364,6 @@ I want to collapse the different rim categories into more manageable categories.
 
 ```{r, echo=TRUE}
 
-# Collapse rim categories by first letter and count them
 rim_counts_collapsed <- ceramics_data %>%
   filter(!is.na(rim_category)) %>%
   mutate(rim_group = case_when(
@@ -372,6 +375,7 @@ rim_counts_collapsed <- ceramics_data %>%
     grepl("^T", rim_category) ~ "Thickened rims",
     grepl("^C", rim_category) ~ "Carinated rims",
     rim_category == "Y" ~ "Y-rims",
+    rim_category == "Inverted" ~ "Inverted rims",
     TRUE ~ "Other"
   )) %>%
   group_by(rim_group) %>%
@@ -380,7 +384,7 @@ rim_counts_collapsed <- ceramics_data %>%
 # Total number of rim data points
 total_rims <- sum(rim_counts_collapsed$Count)
 
-# Bar plot without legend
+# Bar plot
 bar_plot_rim_collapsed <- ggplot(rim_counts_collapsed, aes(x = rim_group, y = Count)) +
   geom_col(fill = "lightblue") +
   labs(title = "Number of Data Points per Collapsed Rim Type",
@@ -399,9 +403,12 @@ bar_plot_rim_collapsed <- ggplot(rim_counts_collapsed, aes(x = rim_group, y = Co
 
 bar_plot_rim_collapsed
 
+
 ```
 
 Collapsing the data might help understand the rim types!
+
+OBS: I need to work on seperating the Inwards thieckened category from the Inverted category
 
 ----------------------------------------------------------------
 # STEP 4: Boxplot of how many datapoint I have per base category
@@ -728,7 +735,9 @@ for (site in site_names_VS01) {
 
 Damn this looks good! But you should determine a specific colour to each vessel shape. Right now it changes from one plot to the next
 
-OBS: Some sites have decimal numbers and I do not really know why. The plots should only represent whole numbers. The sites are: Dhar Tichitt, Dia Mara, Korounkorokale, Sadia. 
+OBS: Some sites have decimal numbers and I do not really know why. The plots should only represent whole numbers. The sites are: Dhar Tichitt, Dia Mara, Korounkorokale, Sadia.
+
+OBS: You must make a designated colour to the types, right now the colour does not follow the vessel type
 
 
 # Interpretation of the results (from most to least vessel types)
@@ -1050,7 +1059,9 @@ for (site in site_names_RS01) {
 
 ```
 
-So, this is perfect! I need to interpret it later. You need to determine a specific colour to each rim type. Right now it changes in the plots. 
+So, this is perfect! I need to interpret it later. 
+
+OBS: You need to determine a specific colour to each rim type. Right now it changes in the plots. 
 
 # STEP 02: Plot all the sites in three diagrams with the different rim types represented
 
@@ -1433,6 +1444,8 @@ Damn I'm good!
 
 OBS: I will not try to put all the data into three diagrams before I know I will use it!
 
+OBS: You must make the columns in the same width
+
 ---------------------------------------
 # STEP 10: Plot of vessel size per site
 ---------------------------------------
@@ -1582,6 +1595,8 @@ Range: In mathematics, the term "range" has two primary meanings: in statistics,
 
 SD: A standard deviation is a statistical measure of the amount of variation or dispersion within a set of data values, indicating how much individual data points typically deviate from the mean (average) of the set. A low standard deviation signifies that the data points tend to be close to the mean, while a high standard deviation indicates that the data points are spread out over a wider range of values.  
 
+#descriptive statistics for all the vessel types
+
 ```{r, echo=TRUE}
 
 # Descriptive statistics for key numeric variables
@@ -1606,5 +1621,837 @@ descriptive_stats
 
 ```
 
+Interpretation: Lets do it for each type category!
+
+-------------------------------------------
+# Descritive statistics per type_category #
+-------------------------------------------
+
+This chunk will calculate the mean, median, min/max, SD, for each vessel type category
+
+First make a new variable for the descriptive statistics and load needed libraries
+
+```{r, echo=TRUE}
+library(dplyr)
+library(tidyr)
+
+numeric_vars <- c("actual_width", "actual_diameter", "actual_height")
+```
+
+#Type 1
+
+```{r, echo=TRUE}
+
+descriptive_stats_type1 <- ceramics_data %>%
+  filter(type_category == "1") %>%
+  select(all_of(numeric_vars)) %>%
+  drop_na() %>% # Remove rows with any NAs
+  summarise(
+    across(all_of(numeric_vars),
+           list(
+             mean = ~mean(.x, na.rm = TRUE),
+             median = ~median(.x, na.rm = TRUE),
+             min = ~min(.x, na.rm = TRUE),
+             max = ~max(.x, na.rm = TRUE),
+             sd = ~sd(.x, na.rm = TRUE)
+           ),
+           .names = "{.col}_{.fn}"
+    )
+  ) %>%
+  pivot_longer(
+    everything(),
+    names_to = c("Variable", "Statistic"),
+    values_to = "Value",
+    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
+  )
+
+# Optional: round values for clarity
+# descriptive_stats_type1 <- descriptive_stats_type1 %>% mutate(Value = round(Value, 2))
+
+descriptive_stats_type1
+
+```
+
 Interpretation:
 
+# Type 2
+
+```{r, echo=TRUE}
+
+descriptive_stats_type2 <- ceramics_data %>%
+  filter(type_category == "2") %>%
+  summarise(
+    across(all_of(numeric_vars),
+           list(
+             mean = ~mean(.x, na.rm = TRUE),
+             median = ~median(.x, na.rm = TRUE),
+             min = ~min(.x, na.rm = TRUE),
+             max = ~max(.x, na.rm = TRUE),
+             sd = ~sd(.x, na.rm = TRUE)
+           ),
+           .names = "{.col}_{.fn}"
+    )
+  ) %>%
+  pivot_longer(
+    everything(),
+    names_to = c("Variable", "Statistic"),
+    values_to = "Value",
+    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
+  )
+
+# Optional: round values for clarity
+# descriptive_stats_type2 <- descriptive_stats_type2 %>% mutate(Value = round(Value, 2))
+
+descriptive_stats_type2
+```
+
+Interpretation:
+
+# Type 3
+
+```{r, echo=TRUE}
+
+descriptive_stats_type3 <- ceramics_data %>%
+  filter(type_category == "3") %>%
+  summarise(
+    across(all_of(numeric_vars),
+           list(
+             mean = ~mean(.x, na.rm = TRUE),
+             median = ~median(.x, na.rm = TRUE),
+             min = ~min(.x, na.rm = TRUE),
+             max = ~max(.x, na.rm = TRUE),
+             sd = ~sd(.x, na.rm = TRUE)
+           ),
+           .names = "{.col}_{.fn}"
+    )
+  ) %>%
+  pivot_longer(
+    everything(),
+    names_to = c("Variable", "Statistic"),
+    values_to = "Value",
+    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
+  )
+
+# Optional: round values for clarity
+# descriptive_stats_type2 <- descriptive_stats_type2 %>% mutate(Value = round(Value, 2))
+
+descriptive_stats_type3
+```
+
+Interpretation:
+
+# Type 4
+
+```{r, echo=TRUE}
+
+descriptive_stats_type4 <- ceramics_data %>%
+  filter(type_category == "4") %>%
+  summarise(
+    across(all_of(numeric_vars),
+           list(
+             mean = ~mean(.x, na.rm = TRUE),
+             median = ~median(.x, na.rm = TRUE),
+             min = ~min(.x, na.rm = TRUE),
+             max = ~max(.x, na.rm = TRUE),
+             sd = ~sd(.x, na.rm = TRUE)
+           ),
+           .names = "{.col}_{.fn}"
+    )
+  ) %>%
+  pivot_longer(
+    everything(),
+    names_to = c("Variable", "Statistic"),
+    values_to = "Value",
+    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
+  )
+
+# Optional: round values for clarity
+# descriptive_stats_type2 <- descriptive_stats_type2 %>% mutate(Value = round(Value, 2))
+
+descriptive_stats_type4
+```
+
+Interpretation:
+
+
+#Type 5
+
+```{r, echo=TRUE}
+
+descriptive_stats_type5 <- ceramics_data %>%
+  filter(type_category == "5") %>%
+  summarise(
+    across(all_of(numeric_vars),
+           list(
+             mean = ~mean(.x, na.rm = TRUE),
+             median = ~median(.x, na.rm = TRUE),
+             min = ~min(.x, na.rm = TRUE),
+             max = ~max(.x, na.rm = TRUE),
+             sd = ~sd(.x, na.rm = TRUE)
+           ),
+           .names = "{.col}_{.fn}"
+    )
+  ) %>%
+  pivot_longer(
+    everything(),
+    names_to = c("Variable", "Statistic"),
+    values_to = "Value",
+    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
+  )
+
+# Optional: round values for clarity
+# descriptive_stats_type2 <- descriptive_stats_type2 %>% mutate(Value = round(Value, 2))
+
+descriptive_stats_type5
+```
+
+# Type 6
+
+```{r, echo=TRUE}
+
+descriptive_stats_type6 <- ceramics_data %>%
+  filter(type_category == "6") %>%
+  summarise(
+    across(all_of(numeric_vars),
+           list(
+             mean = ~mean(.x, na.rm = TRUE),
+             median = ~median(.x, na.rm = TRUE),
+             min = ~min(.x, na.rm = TRUE),
+             max = ~max(.x, na.rm = TRUE),
+             sd = ~sd(.x, na.rm = TRUE)
+           ),
+           .names = "{.col}_{.fn}"
+    )
+  ) %>%
+  pivot_longer(
+    everything(),
+    names_to = c("Variable", "Statistic"),
+    values_to = "Value",
+    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
+  )
+
+# Optional: round values for clarity
+# descriptive_stats_type2 <- descriptive_stats_type2 %>% mutate(Value = round(Value, 2))
+
+descriptive_stats_type6
+```
+
+Interpretation:
+
+# Type 7
+
+```{r, echo=TRUE}
+
+descriptive_stats_type7 <- ceramics_data %>%
+  filter(type_category == "7") %>%
+  summarise(
+    across(all_of(numeric_vars),
+           list(
+             mean = ~mean(.x, na.rm = TRUE),
+             median = ~median(.x, na.rm = TRUE),
+             min = ~min(.x, na.rm = TRUE),
+             max = ~max(.x, na.rm = TRUE),
+             sd = ~sd(.x, na.rm = TRUE)
+           ),
+           .names = "{.col}_{.fn}"
+    )
+  ) %>%
+  pivot_longer(
+    everything(),
+    names_to = c("Variable", "Statistic"),
+    values_to = "Value",
+    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
+  )
+
+# Optional: round values for clarity
+# descriptive_stats_type2 <- descriptive_stats_type2 %>% mutate(Value = round(Value, 2))
+
+descriptive_stats_type7
+```
+
+Interpretaiton:
+
+# Type 8
+
+```{r, echo=TRUE}
+
+descriptive_stats_type8 <- ceramics_data %>%
+  filter(type_category == "8") %>%
+  summarise(
+    across(all_of(numeric_vars),
+           list(
+             mean = ~mean(.x, na.rm = TRUE),
+             median = ~median(.x, na.rm = TRUE),
+             min = ~min(.x, na.rm = TRUE),
+             max = ~max(.x, na.rm = TRUE),
+             sd = ~sd(.x, na.rm = TRUE)
+           ),
+           .names = "{.col}_{.fn}"
+    )
+  ) %>%
+  pivot_longer(
+    everything(),
+    names_to = c("Variable", "Statistic"),
+    values_to = "Value",
+    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
+  )
+
+# Optional: round values for clarity
+# descriptive_stats_type2 <- descriptive_stats_type2 %>% mutate(Value = round(Value, 2))
+
+descriptive_stats_type8
+```
+
+Interpretation:
+
+# Type 9
+
+```{r, echo=TRUE}
+
+descriptive_stats_type9 <- ceramics_data %>%
+  filter(type_category == "9") %>%
+  summarise(
+    across(all_of(numeric_vars),
+           list(
+             mean = ~mean(.x, na.rm = TRUE),
+             median = ~median(.x, na.rm = TRUE),
+             min = ~min(.x, na.rm = TRUE),
+             max = ~max(.x, na.rm = TRUE),
+             sd = ~sd(.x, na.rm = TRUE)
+           ),
+           .names = "{.col}_{.fn}"
+    )
+  ) %>%
+  pivot_longer(
+    everything(),
+    names_to = c("Variable", "Statistic"),
+    values_to = "Value",
+    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
+  )
+
+# Optional: round values for clarity
+# descriptive_stats_type2 <- descriptive_stats_type2 %>% mutate(Value = round(Value, 2))
+
+descriptive_stats_type9
+```
+
+Interpretation:
+
+# Type 10
+
+```{r, echo=TRUE}
+
+descriptive_stats_type10 <- ceramics_data %>%
+  filter(type_category == "10") %>%
+  summarise(
+    across(all_of(numeric_vars),
+           list(
+             mean = ~mean(.x, na.rm = TRUE),
+             median = ~median(.x, na.rm = TRUE),
+             min = ~min(.x, na.rm = TRUE),
+             max = ~max(.x, na.rm = TRUE),
+             sd = ~sd(.x, na.rm = TRUE)
+           ),
+           .names = "{.col}_{.fn}"
+    )
+  ) %>%
+  pivot_longer(
+    everything(),
+    names_to = c("Variable", "Statistic"),
+    values_to = "Value",
+    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
+  )
+
+# Optional: round values for clarity
+# descriptive_stats_type2 <- descriptive_stats_type2 %>% mutate(Value = round(Value, 2))
+
+descriptive_stats_type10
+```
+
+Interpretaiton:
+
+# Type 11
+
+```{r, echo=TRUE}
+
+descriptive_stats_type11 <- ceramics_data %>%
+  filter(type_category == "11") %>%
+  summarise(
+    across(all_of(numeric_vars),
+           list(
+             mean = ~mean(.x, na.rm = TRUE),
+             median = ~median(.x, na.rm = TRUE),
+             min = ~min(.x, na.rm = TRUE),
+             max = ~max(.x, na.rm = TRUE),
+             sd = ~sd(.x, na.rm = TRUE)
+           ),
+           .names = "{.col}_{.fn}"
+    )
+  ) %>%
+  pivot_longer(
+    everything(),
+    names_to = c("Variable", "Statistic"),
+    values_to = "Value",
+    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
+  )
+
+# Optional: round values for clarity
+# descriptive_stats_type2 <- descriptive_stats_type2 %>% mutate(Value = round(Value, 2))
+
+descriptive_stats_type11
+```
+
+Interpretation:
+
+#Type 13
+
+These are flasks and I only have one registration!
+
+```{r, echo=TRUE}
+
+descriptive_stats_type13 <- ceramics_data %>%
+  filter(type_category == "13") %>%
+  summarise(
+    across(all_of(numeric_vars),
+           list(
+             mean = ~mean(.x, na.rm = TRUE),
+             median = ~median(.x, na.rm = TRUE),
+             min = ~min(.x, na.rm = TRUE),
+             max = ~max(.x, na.rm = TRUE),
+             sd = ~sd(.x, na.rm = TRUE)
+           ),
+           .names = "{.col}_{.fn}"
+    )
+  ) %>%
+  pivot_longer(
+    everything(),
+    names_to = c("Variable", "Statistic"),
+    values_to = "Value",
+    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
+  )
+
+# Optional: round values for clarity
+# descriptive_stats_type2 <- descriptive_stats_type2 %>% mutate(Value = round(Value, 2))
+
+descriptive_stats_type13
+```
+
+Interpretaiton: It looks like this because there are only very few registrations
+
+# Type 14
+
+```{r, echo=TRUE}
+
+descriptive_stats_type14 <- ceramics_data %>%
+  filter(type_category == "14") %>%
+  summarise(
+    across(all_of(numeric_vars),
+           list(
+             mean = ~mean(.x, na.rm = TRUE),
+             median = ~median(.x, na.rm = TRUE),
+             min = ~min(.x, na.rm = TRUE),
+             max = ~max(.x, na.rm = TRUE),
+             sd = ~sd(.x, na.rm = TRUE)
+           ),
+           .names = "{.col}_{.fn}"
+    )
+  ) %>%
+  pivot_longer(
+    everything(),
+    names_to = c("Variable", "Statistic"),
+    values_to = "Value",
+    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
+  )
+
+# Optional: round values for clarity
+# descriptive_stats_type2 <- descriptive_stats_type2 %>% mutate(Value = round(Value, 2))
+
+descriptive_stats_type14
+```
+
+Interpretaion:
+
+# Type 15
+
+```{r, echo=TRUE}
+
+descriptive_stats_type15 <- ceramics_data %>%
+  filter(type_category == "15") %>%
+  summarise(
+    across(all_of(numeric_vars),
+           list(
+             mean = ~mean(.x, na.rm = TRUE),
+             median = ~median(.x, na.rm = TRUE),
+             min = ~min(.x, na.rm = TRUE),
+             max = ~max(.x, na.rm = TRUE),
+             sd = ~sd(.x, na.rm = TRUE)
+           ),
+           .names = "{.col}_{.fn}"
+    )
+  ) %>%
+  pivot_longer(
+    everything(),
+    names_to = c("Variable", "Statistic"),
+    values_to = "Value",
+    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
+  )
+
+# Optional: round values for clarity
+# descriptive_stats_type2 <- descriptive_stats_type2 %>% mutate(Value = round(Value, 2))
+
+descriptive_stats_type15
+```
+
+Interpretation:
+
+# plot the values in one
+
+Let's try to plot the mean for all the vessel types in one plot
+
+Collapse all into one dataset and load libraries:
+
+```{r, echo=TRUE}
+library(ggplot2)
+library(dplyr)
+
+# Combine all type_category stats into one dataset
+descriptive_stats_all <- bind_rows(
+  descriptive_stats_type1 %>% mutate(vessel_type = 1),
+  descriptive_stats_type2 %>% mutate(vessel_type = 2),
+  descriptive_stats_type3 %>% mutate(vessel_type = 3),
+  descriptive_stats_type4 %>% mutate(vessel_type = 4),
+  descriptive_stats_type5 %>% mutate(vessel_type = 5),
+  descriptive_stats_type6 %>% mutate(vessel_type = 6),
+  descriptive_stats_type7 %>% mutate(vessel_type = 7),
+  descriptive_stats_type8 %>% mutate(vessel_type = 8),
+  descriptive_stats_type9 %>% mutate(vessel_type = 9),
+  descriptive_stats_type10 %>% mutate(vessel_type = 10),
+  descriptive_stats_type11 %>% mutate(vessel_type = 11),
+  descriptive_stats_type14 %>% mutate(vessel_type = 14),
+  descriptive_stats_type15 %>% mutate(vessel_type = 15)
+)
+
+```
+
+# Mean for all actual_width
+
+```{r, echo=TRUE}
+# Filter to only mean values of actual_width
+mean_values_width <- descriptive_stats_all %>%
+  filter(Statistic == "mean", Variable == "actual_width")
+
+# Plot
+ggplot(mean_values_width, aes(x = factor(vessel_type), y = Value)) +
+  geom_col(fill = "lightblue") +
+  labs(
+    title = "Mean Width per Vessel Type",
+    x = "Vessel Type",
+    y = "Mean Actual Width (cm)"
+  ) +
+  theme_minimal()
+
+```
+
+Interpretation:
+
+# Median for all actual_width
+
+```{r, echo=TRUE}
+
+# Filter to only median values of actual_width
+median_values_width <- descriptive_stats_all %>%
+  filter(Statistic == "median", Variable == "actual_width")
+
+# Plot
+ggplot(median_values_width, aes(x = factor(vessel_type), y = Value)) +
+  geom_col(fill = "lightblue") +
+  labs(
+    title = "Median Width per Vessel Type",
+    x = "Vessel Type",
+    y = "Median Actual Width (cm)"
+  ) +
+  theme_minimal()
+
+```
+
+Interpretation:
+
+# Min. for all actual_width
+
+```{r, echo=TRUE}
+
+# Filter to only min. values of actual_width
+min_values_width <- descriptive_stats_all %>%
+  filter(Statistic == "min", Variable == "actual_width")
+
+# Plot
+ggplot(min_values_width, aes(x = factor(vessel_type), y = Value)) +
+  geom_col(fill = "lightblue") +
+  labs(
+    title = "Min. Width per Vessel Type",
+    x = "Vessel Type",
+    y = "Min. Actual Width (cm)"
+  ) +
+  theme_minimal()
+
+```
+
+Interpretaion:
+
+# Max. for all actual width
+
+```{r, echo=TRUE}
+
+# Filter to only max. values of actual_width
+max_values_width <- descriptive_stats_all %>%
+  filter(Statistic == "max", Variable == "actual_width")
+
+# Plot
+ggplot(max_values_width, aes(x = factor(vessel_type), y = Value)) +
+  geom_col(fill = "lightblue") +
+  labs(
+    title = "Max. Width per Vessel Type",
+    x = "Vessel Type",
+    y = "Max. Actual Width (cm)"
+  ) +
+  theme_minimal()
+
+```
+
+Interpretation:
+
+# SD for all actual width
+
+```{r, echo=TRUE}
+
+# Filter to only SD values of actual_width
+SD_values_width <- descriptive_stats_all %>%
+  filter(Statistic == "sd", Variable == "actual_width")
+
+# Plot
+ggplot(SD_values_width, aes(x = factor(vessel_type), y = Value)) +
+  geom_col(fill = "lightblue") +
+  labs(
+    title = "SD Width per Vessel Type",
+    x = "Vessel Type",
+    y = "SD Actual Width"
+  ) +
+  theme_minimal()
+
+```
+
+Interpretation:
+
+The ones with lowest SD are 14 and 15 which are also the two groups I see as most specialized of the vessel types! Good result! The less SD the more standardized the categories are!
+
+It is funny that type 11 (tightly closed vertical oval) has the most deviation! Perhaps it is because of the small sample size??
+
+# Mean for all actual_height
+
+```{r, echo=TRUE}
+# Filter to only mean values of actual_height
+mean_values_height <- descriptive_stats_all %>%
+  filter(Statistic == "mean", Variable == "actual_height")
+
+# Plot
+ggplot(mean_values_height, aes(x = factor(vessel_type), y = Value)) +
+  geom_col(fill = "lightblue") +
+  labs(
+    title = "Mean Height per Vessel Type",
+    x = "Vessel Type",
+    y = "Mean Actual Height (cm)"
+  ) +
+  theme_minimal()
+
+```
+
+Interpretation:
+
+# Median for all actual_height
+
+```{r, echo=TRUE}
+# Filter to only median values of actual_height
+median_values_height <- descriptive_stats_all %>%
+  filter(Statistic == "median", Variable == "actual_height")
+
+# Plot
+ggplot(median_values_height, aes(x = factor(vessel_type), y = Value)) +
+  geom_col(fill = "lightblue") +
+  labs(
+    title = "Median Height per Vessel Type",
+    x = "Vessel Type",
+    y = "Median Actual Height (cm)"
+  ) +
+  theme_minimal()
+
+```
+
+Interpretation:
+
+# Min. for all actual_height
+
+```{r, echo=TRUE}
+# Filter to only min. values of actual_height
+min_values_height <- descriptive_stats_all %>%
+  filter(Statistic == "min", Variable == "actual_height")
+
+# Plot
+ggplot(min_values_height, aes(x = factor(vessel_type), y = Value)) +
+  geom_col(fill = "lightblue") +
+  labs(
+    title = "Min. Height per Vessel Type",
+    x = "Vessel Type",
+    y = "Min. Actual Height (cm)"
+  ) +
+  theme_minimal()
+
+```
+
+Interpretation:
+
+# Max. for all actual_height
+
+```{r, echo=TRUE}
+# Filter to only max. values of actual_height
+max_values_height <- descriptive_stats_all %>%
+  filter(Statistic == "max", Variable == "actual_height")
+
+# Plot
+ggplot(max_values_height, aes(x = factor(vessel_type), y = Value)) +
+  geom_col(fill = "lightblue") +
+  labs(
+    title = "Max. Height per Vessel Type",
+    x = "Vessel Type",
+    y = "Max. Actual Height (cm)"
+  ) +
+  theme_minimal()
+
+```
+
+Interpretation:
+
+# SD for all actual_height
+
+```{r, echo=TRUE}
+# Filter to only SD values of actual_height
+SD_values_height <- descriptive_stats_all %>%
+  filter(Statistic == "sd", Variable == "actual_height")
+
+# Plot
+ggplot(SD_values_height, aes(x = factor(vessel_type), y = Value)) +
+  geom_col(fill = "lightblue") +
+  labs(
+    title = "SD Height per Vessel Type",
+    x = "Vessel Type",
+    y = "SD Actual Height"
+  ) +
+  theme_minimal()
+
+```
+
+Interpretation:
+
+# Mean for all actual_diameter
+
+```{r, echo=TRUE}
+# Filter to only mean values of actual_diameter
+mean_values_diameter <- descriptive_stats_all %>%
+  filter(Statistic == "mean", Variable == "actual_diameter")
+
+# Plot
+ggplot(mean_values_diameter, aes(x = factor(vessel_type), y = Value)) +
+  geom_col(fill = "lightblue") +
+  labs(
+    title = "Mean Diameter per Vessel Type",
+    x = "Vessel Type",
+    y = "Mean Actual Diameter (cm)"
+  ) +
+  theme_minimal()
+
+```
+
+Interpretation:
+
+# Median for all actual_diameter
+
+```{r, echo=TRUE}
+# Filter to only median values of actual_diameter
+median_values_diameter <- descriptive_stats_all %>%
+  filter(Statistic == "median", Variable == "actual_diameter")
+
+# Plot
+ggplot(median_values_diameter, aes(x = factor(vessel_type), y = Value)) +
+  geom_col(fill = "lightblue") +
+  labs(
+    title = "Median Diameter per Vessel Type",
+    x = "Vessel Type",
+    y = "Median Actual Diameter (cm)"
+  ) +
+  theme_minimal()
+
+```
+
+Interpretation:
+
+# Min. for all actual_diameter
+
+```{r, echo=TRUE}
+# Filter to only min. values of actual_diameter
+min_values_diameter <- descriptive_stats_all %>%
+  filter(Statistic == "min", Variable == "actual_diameter")
+
+# Plot
+ggplot(min_values_diameter, aes(x = factor(vessel_type), y = Value)) +
+  geom_col(fill = "lightblue") +
+  labs(
+    title = "Min. Diameter per Vessel Type",
+    x = "Vessel Type",
+    y = "Min. Actual Diameter (cm)"
+  ) +
+  theme_minimal()
+
+```
+
+Interpretation:
+
+# Max. for all actual_diameter
+
+```{r, echo=TRUE}
+# Filter to only max. values of actual_diameter
+max_values_diameter <- descriptive_stats_all %>%
+  filter(Statistic == "max", Variable == "actual_diameter")
+
+# Plot
+ggplot(max_values_diameter, aes(x = factor(vessel_type), y = Value)) +
+  geom_col(fill = "lightblue") +
+  labs(
+    title = "Max. Diameter per Vessel Type",
+    x = "Vessel Type",
+    y = "Max. Actual Diameter (cm)"
+  ) +
+  theme_minimal()
+
+```
+
+Interpretation:
+
+# SD for all actual_diameter
+
+```{r, echo=TRUE}
+# Filter to only SD values of actual_diameter
+SD_values_diameter <- descriptive_stats_all %>%
+  filter(Statistic == "sd", Variable == "actual_diameter")
+
+# Plot
+ggplot(SD_values_diameter, aes(x = factor(vessel_type), y = Value)) +
+  geom_col(fill = "lightblue") +
+  labs(
+    title = "SD Diameter per Vessel Type",
+    x = "Vessel Type",
+    y = "SD Actual Diameter"
+  ) +
+  theme_minimal()
+
+```
+
+Interpretation:
