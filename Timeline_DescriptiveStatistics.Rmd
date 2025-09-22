@@ -19,6 +19,15 @@ When you click the **Knit** button a document will be generated that includes bo
 
 ### IDEAS FOR THIS DOCUMENT ###
 
+Interpret the key results for Display Descriptive Statistics
+
+Step 1: Describe the size of your sample.
+Step 2: Describe the center of your data.
+Step 3: Describe the spread of your data.
+Step 4: Assess the shape and spread of your data distribution.
+
+Compare data from different groups.
+
 To better understand my data I have made a document to explore the data:
 
 - which rim type is most popular overall? -DONE-
@@ -44,6 +53,12 @@ To better understand my data I have made a document to explore the data:
 - What decoration category is dominant overall?
 - What decoration category is dominant per site?
 - What decoration category is dominant through time?
+
+- Calculate the mean, median, range (min./max.), and standard deviation (SD) for each vessel type based on:
+  - actual_width -DONE-
+  - actual_height -DONE-
+  - actual_diameter -DONE-
+- Plot each parameter in bar plots -DONE-
 
 -----------------------------------------
 ### STEP 0: Install and load packages ###
@@ -408,7 +423,7 @@ bar_plot_rim_collapsed
 
 Collapsing the data might help understand the rim types!
 
-OBS: I need to work on seperating the Inwards thieckened category from the Inverted category
+OBS: I need to work on separating the Inwards thickened category from the Inverted category
 
 ----------------------------------------------------------------
 # STEP 4: Boxplot of how many datapoint I have per base category
@@ -1595,6 +1610,8 @@ Range: In mathematics, the term "range" has two primary meanings: in statistics,
 
 SD: A standard deviation is a statistical measure of the amount of variation or dispersion within a set of data values, indicating how much individual data points typically deviate from the mean (average) of the set. A low standard deviation signifies that the data points tend to be close to the mean, while a high standard deviation indicates that the data points are spread out over a wider range of values.  
 
+OBS: The difference between the mean and the median is that the mean is the most frequent number, and the median is where the middle of the dataset is based on the total count of data points.
+
 #descriptive statistics for all the vessel types
 
 ```{r, echo=TRUE}
@@ -1621,7 +1638,9 @@ descriptive_stats
 
 ```
 
-Interpretation: Lets do it for each type category!
+Interpretation: 
+
+Lets do it for each type category!
 
 -------------------------------------------
 # Descritive statistics per type_category #
@@ -2036,7 +2055,7 @@ descriptive_stats_type13 <- ceramics_data %>%
 descriptive_stats_type13
 ```
 
-Interpretaiton: It looks like this because there are only very few registrations
+Interpretation: It looks like this because there are only very few registrations
 
 # Type 14
 
