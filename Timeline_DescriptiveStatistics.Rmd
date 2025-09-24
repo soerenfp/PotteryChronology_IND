@@ -2121,7 +2121,9 @@ descriptive_stats_type15 <- ceramics_data %>%
 descriptive_stats_type15
 ```
 
-Interpretation:
+Interpretation: I must remember that many of these vessels are not fully reconstructed! It is the base that is missing from many of these, so the height is not valid. I must make new calculations only for the fully reconstructed vessels!
+
+Make a new calculation only based on the R-values in the excel sheet!
 
 # plot the values in one
 
