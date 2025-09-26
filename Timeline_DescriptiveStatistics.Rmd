@@ -219,7 +219,7 @@ legend_table_vessel <- data.frame(
                   "Open carinated vessels", "Wide-open carinated vessels", 
                   "Vertical-vertical oval vessels", "Closed-vertical oval vessels", 
                   "Tightly-closed vertical oval vessels", "Lids", 
-                  "Flasks", "Bottles", "Tellem tripods")
+                  "Flasks", "Tellem tripods", "Tellem tripods (top)")
 )
 
 # Convert the legend table to a plot with adjusted margins
@@ -327,7 +327,7 @@ legend_table_rim <- data.frame(
   Rim_Type = 1:27,
   Abbreviation = c("Sr", "Sp", "Sf", "Sb", "Es", "Ec", "Ecc", "Ef", "Efl", "Ep", 
                    "Et", "Esg", "Emg", "Vs", "Vc", "Oth", "Otc", "Otf", "Ith", 
-                   "Itc", "Itf", "Th", "Tc", "Tf", "Ca", "I", "Y"),
+                   "Itc", "Itf", "Th", "Tc", "Tf", "Ca", "B", "Y"),
   Description = c("Simple, rounded", "Simple, pointy", "Simple, flattened", 
                   "Simple, bevelled", "Everted, simple", "Everted, collared", 
                   "Everted, collared channelled", "Everted, flaring", 
@@ -338,7 +338,7 @@ legend_table_rim <- data.frame(
                   "Outward thickened, flattened", "Inwards thickened, hinged",
                   "Inwards thickened, curved", "Inwards thickened, flattened",
                   "Thickened, hinged", "Thickened, curved", "Thickened, flattened",
-                  "Carinated", "Inverted", "Y-rims")
+                  "Carinated", "Backward rims", "Y-rims")
 )
 
 # Convert the legend table to a plot with adjusted margins and abbreviations
@@ -389,8 +389,8 @@ rim_counts_collapsed <- ceramics_data %>%
     grepl("^I", rim_category) ~ "Inwards th. rims",
     grepl("^T", rim_category) ~ "Thickened rims",
     grepl("^C", rim_category) ~ "Carinated rims",
+    grepl("^B", rim_category) ~ "Backward rims",
     rim_category == "Y" ~ "Y-rims",
-    rim_category == "Inverted" ~ "Inverted rims",
     TRUE ~ "Other"
   )) %>%
   group_by(rim_group) %>%
@@ -418,12 +418,11 @@ bar_plot_rim_collapsed <- ggplot(rim_counts_collapsed, aes(x = rim_group, y = Co
 
 bar_plot_rim_collapsed
 
-
 ```
 
 Collapsing the data might help understand the rim types!
 
-OBS: I need to work on separating the Inwards thickened category from the Inverted category
+OBS: I need to work on separating the Inwards thickened category from the Inverted category -> solved! I renamed the inverted rims to backward
 
 ----------------------------------------------------------------
 # STEP 4: Boxplot of how many datapoint I have per base category
@@ -667,7 +666,6 @@ cowplot::plot_grid(bar_plot_attribute, legend_plot_attribute, ncol = 2, rel_widt
 
 ```
 Looks perfect!
-
 
 --------------------------------------------------------------------------------
 ## DATA PER SITE ##
@@ -1018,7 +1016,7 @@ data_count_RS01 <- ceramics_subset %>%
 rim_description_map <- data.frame(
   rim_category = c("Sr", "Sp", "Sf", "Sb", "Es", "Ec", "Ecc", "Ef", "Efl", "Ep", 
                    "Et", "Esg", "Emg", "Vs", "Vc", "Oth", "Otc", "Otf", "Ith", 
-                   "Itc", "Itf", "Th", "Tc", "Tf", "Ca", "I", "Y"),
+                   "Itc", "Itf", "Th", "Tc", "Tf", "Ca", "B", "Y"),
   rim_description = c("Simple, rounded", "Simple, pointy", "Simple, flattened", 
                       "Simple, bevelled", "Everted, simple", "Everted, collared", 
                       "Everted, collared channelled", "Everted, flaring", 
@@ -1029,7 +1027,7 @@ rim_description_map <- data.frame(
                       "Outward thickened, flattened", "Inward thickened, hinged",
                       "Inward thickened, curved", "Inward thickened, flattened",
                       "Thickened, hinged", "Thickened, curved", "Thickened, flattened",
-                      "Carinated", "Inverted", "Y-rims")
+                      "Carinated", "Backward rims", "Y-rims")
 )
 
 # Ensure `rim_category` columns are character for merging
@@ -1095,7 +1093,7 @@ data_count_RS02 <- ceramics_subset %>%
 rim_descriptions_RS02 <- data.frame(
   rim_category = c("Sr", "Sp", "Sf", "Sb", "Es", "Ec", "Ecc", "Ef", "Efl", "Ep", 
                    "Et", "Esg", "Emg", "Vs", "Vc", "Oth", "Otc", "Otf", "Ith", 
-                   "Itc", "Itf", "Th", "Tc", "Tf", "Ca", "I", "Y"),
+                   "Itc", "Itf", "Th", "Tc", "Tf", "Ca", "B", "Y"),
   rim_description = c("Simple, rounded", "Simple, pointy", "Simple, flattened", 
                       "Simple, bevelled", "Everted, simple", "Everted, collared", 
                       "Everted, collared channelled", "Everted, flaring", 
@@ -1106,7 +1104,7 @@ rim_descriptions_RS02 <- data.frame(
                       "Outward thickened, flattened", "Inward thickened, hinged",
                       "Inward thickened, curved", "Inward thickened, flattened",
                       "Thickened, hinged", "Thickened, curved", "Thickened, flattened",
-                      "Carinated", "Inverted", "Y-rims")
+                      "Carinated", "Backward rims", "Y-rims")
 )
 
 # Ensure both dataframes use character type for `rim_category`
@@ -1262,7 +1260,7 @@ data_count_RS02 <- ceramics_subset %>%
 rim_descriptions_RS02 <- data.frame(
   rim_category = toupper(c("Sr", "Sp", "Sf", "Sb", "Es", "Ec", "Ecc", "Ef", "Efl", "Ep", 
                            "Et", "Esg", "Emg", "Vs", "Vc", "Oth", "Otc", "Otf", "Ith", 
-                           "Itc", "Itf", "Th", "Tc", "Tf", "Ca", "I", "Y")),
+                           "Itc", "Itf", "Th", "Tc", "Tf", "Ca", "B", "Y")),
   rim_description = c("Simple, rounded", "Simple, pointy", "Simple, flattened", 
                       "Simple, bevelled", "Everted, simple", "Everted, collared", 
                       "Everted, collared channelled", "Everted, flaring", 
@@ -1273,7 +1271,7 @@ rim_descriptions_RS02 <- data.frame(
                       "Outward thickened, flattened", "Inward thickened, hinged",
                       "Inward thickened, curved", "Inward thickened, flattened",
                       "Thickened, hinged", "Thickened, curved", "Thickened, flattened",
-                      "Carinated", "Inverted", "Y-rims"),
+                      "Carinated", "Backward rims", "Y-rims"),
   stringsAsFactors = FALSE
 )
 
@@ -1485,7 +1483,7 @@ data_count_SS01 <- ceramics_subset %>%
 # Create a mapping of base_category to descriptions (optional for additional info)
 size_description_map <- data.frame(
   size_category = c("a", "b", "c", "d", "e"),
-  size_description = c("<14 cm", "15-24 cm", "25-34 cm", "35-44 cm", ">45 cm")
+  size_description = c("<14.9 cm", "15-24.9 cm", "25-34.9 cm", "35-44.9 cm", ">45 cm")
 )
 
 # Ensure `size_category` columns are character for merging
@@ -1657,7 +1655,7 @@ library(tidyr)
 numeric_vars <- c("actual_width", "actual_diameter", "actual_height")
 ```
 
-#Type 1
+#Type 1 "Wide-open sphere"
 
 ```{r, echo=TRUE}
 
@@ -1693,7 +1691,7 @@ descriptive_stats_type1
 
 Interpretation:
 
-# Type 2
+# Type 2 "Open sphere"
 
 ```{r, echo=TRUE}
 
@@ -1726,7 +1724,7 @@ descriptive_stats_type2
 
 Interpretation:
 
-# Type 3
+# Type 3 (Closed hor. ellipsoid)
 
 ```{r, echo=TRUE}
 
@@ -1759,7 +1757,7 @@ descriptive_stats_type3
 
 Interpretation:
 
-# Type 4
+# Type 4 (Vertical sphere)
 
 ```{r, echo=TRUE}
 
@@ -1792,8 +1790,7 @@ descriptive_stats_type4
 
 Interpretation:
 
-
-#Type 5
+#Type 5 (Closed sphere)
 
 ```{r, echo=TRUE}
 
@@ -1824,7 +1821,7 @@ descriptive_stats_type5 <- ceramics_data %>%
 descriptive_stats_type5
 ```
 
-# Type 6
+# Type 6 (Tightly-closed sphere)
 
 ```{r, echo=TRUE}
 
@@ -1857,7 +1854,7 @@ descriptive_stats_type6
 
 Interpretation:
 
-# Type 7
+# Type 7 (Open carinated)
 
 ```{r, echo=TRUE}
 
@@ -1890,7 +1887,7 @@ descriptive_stats_type7
 
 Interpretaiton:
 
-# Type 8
+# Type 8 (Wide-open carinated)
 
 ```{r, echo=TRUE}
 
@@ -1923,7 +1920,7 @@ descriptive_stats_type8
 
 Interpretation:
 
-# Type 9
+# Type 9 (Vertical ver. ellipsoid)
 
 ```{r, echo=TRUE}
 
@@ -1956,7 +1953,7 @@ descriptive_stats_type9
 
 Interpretation:
 
-# Type 10
+# Type 10 (Closed ver. ellipsoid)
 
 ```{r, echo=TRUE}
 
@@ -1987,9 +1984,9 @@ descriptive_stats_type10 <- ceramics_data %>%
 descriptive_stats_type10
 ```
 
-Interpretaiton:
+Interpretation:
 
-# Type 11
+# Type 11 (Tightly-closed ver. ellipsoid)
 
 ```{r, echo=TRUE}
 
@@ -2022,7 +2019,7 @@ descriptive_stats_type11
 
 Interpretation:
 
-#Type 13
+#Type 13 (Flasks)
 
 These are flasks and I only have one registration!
 
@@ -2057,7 +2054,7 @@ descriptive_stats_type13
 
 Interpretation: It looks like this because there are only very few registrations
 
-# Type 14
+# Type 14 (Tellem tripods)
 
 ```{r, echo=TRUE}
 
@@ -2088,9 +2085,9 @@ descriptive_stats_type14 <- ceramics_data %>%
 descriptive_stats_type14
 ```
 
-Interpretaion:
+Interpretation:
 
-# Type 15
+# Type 15 (Tellem tripods (top))
 
 ```{r, echo=TRUE}
 
@@ -2121,9 +2118,7 @@ descriptive_stats_type15 <- ceramics_data %>%
 descriptive_stats_type15
 ```
 
-Interpretation: I must remember that many of these vessels are not fully reconstructed! It is the base that is missing from many of these, so the height is not valid. I must make new calculations only for the fully reconstructed vessels!
-
-Make a new calculation only based on the R-values in the excel sheet!
+Interpretation: 
 
 # plot the values in one
 
@@ -2148,6 +2143,7 @@ descriptive_stats_all <- bind_rows(
   descriptive_stats_type9 %>% mutate(vessel_type = 9),
   descriptive_stats_type10 %>% mutate(vessel_type = 10),
   descriptive_stats_type11 %>% mutate(vessel_type = 11),
+  descriptive_stats_type13 %>% mutate(vessel_type = 13),
   descriptive_stats_type14 %>% mutate(vessel_type = 14),
   descriptive_stats_type15 %>% mutate(vessel_type = 15)
 )
@@ -2255,7 +2251,7 @@ ggplot(SD_values_width, aes(x = factor(vessel_type), y = Value)) +
   labs(
     title = "SD Width per Vessel Type",
     x = "Vessel Type",
-    y = "SD Actual Width"
+    y = "SD Actual Width (cm)"
   ) +
   theme_minimal()
 
@@ -2364,7 +2360,7 @@ ggplot(SD_values_height, aes(x = factor(vessel_type), y = Value)) +
   labs(
     title = "SD Height per Vessel Type",
     x = "Vessel Type",
-    y = "SD Actual Height"
+    y = "SD Actual Height (cm)"
   ) +
   theme_minimal()
 
@@ -2469,7 +2465,7 @@ ggplot(SD_values_diameter, aes(x = factor(vessel_type), y = Value)) +
   labs(
     title = "SD Diameter per Vessel Type",
     x = "Vessel Type",
-    y = "SD Actual Diameter"
+    y = "SD Actual Diameter (cm)"
   ) +
   theme_minimal()
 

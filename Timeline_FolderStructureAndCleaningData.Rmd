@@ -278,7 +278,7 @@ Explanation of the Code:
 # Load excel sheet into a dataset, trim whitespaces and replace missing rows with NAs
 
 # Load the Excel file into a dataset
-data_measurements <- read_excel("analysis/data/raw_data/04_timelinedata.xlsx")
+data_measurements <- read_excel("analysis/data/raw_data/05_timelinedata.xlsx")
 
 # View the initial structure of the data
 #str(data_trial02)
