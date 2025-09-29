@@ -2472,3 +2472,81 @@ ggplot(SD_values_diameter, aes(x = factor(vessel_type), y = Value)) +
 ```
 
 Interpretation:
+
+# coefficient of variation per type category
+
+```{r, echo=TRUE}
+library(dplyr)
+
+# Calculate coefficient of variation (CV = sd / mean)
+cv_by_type <- ceramics_data %>%
+  filter(!is.na(type_category)) %>%  # ensure type_category exists
+  group_by(type_category) %>%
+  summarise(across(
+    all_of(numeric_vars),
+    ~ (sd(.x, na.rm = TRUE) / mean(.x, na.rm = TRUE)) * 100,  # *100 for percentage
+    .names = "CV_{.col}"
+  )) %>%
+  arrange(type_category)
+
+# View result
+cv_by_type
+```
+
+# plot in bar plot
+
+```{r, echo=TRUE}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# Calculate coefficient of variation (CV = sd / mean * 100)
+cv_by_type <- ceramics_data %>%
+  filter(!is.na(type_category)) %>%
+  group_by(type_category) %>%
+  summarise(across(
+    all_of(numeric_vars),
+    ~ (sd(.x, na.rm = TRUE) / mean(.x, na.rm = TRUE)) * 100,  # CV in percentage
+    .names = "CV_{.col}"
+  )) %>%
+  arrange(type_category)
+
+# Reshape data for plotting
+cv_long <- cv_by_type %>%
+  pivot_longer(
+    cols = starts_with("CV_"),
+    names_to = "Variable",
+    values_to = "CV"
+  ) %>%
+  mutate(
+    Variable = recode(Variable,
+                      "CV_actual_width" = "Width",
+                      "CV_actual_diameter" = "Diameter",
+                      "CV_actual_height" = "Height")
+  )
+
+# Plot grouped bar chart with threshold line (no text)
+ggplot(cv_long, aes(x = factor(type_category), y = CV, fill = Variable)) +
+  geom_col(position = position_dodge(width = 0.8)) +
+  geom_hline(yintercept = 40, linetype = "dashed", color = "red", size = 1) +
+  labs(
+    title = "Coefficient of Variation (CV) by Vessel Type",
+    subtitle = "Red dashed line marks high variability threshold (40%)",
+    x = "Vessel Type",
+    y = "CV (%)",
+    fill = "Measurement"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "top"
+  )
+
+```
+
+Interpretation:
+
+Bars above the red dashed line (40%) indicate types with notably high variation — possibly less standardized or functionally diverse.
+
+Bars well below the line suggest more controlled, standardized production.
+
