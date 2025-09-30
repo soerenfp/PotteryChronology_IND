@@ -1887,7 +1887,7 @@ descriptive_stats_type7 <- ceramics_data %>%
 descriptive_stats_type7
 ```
 
-Interpretaiton:
+Interpretation:
 
 # Type 8 (Wide-open carinated)
 
