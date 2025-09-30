@@ -1384,6 +1384,8 @@ plot3a_RS02
 ```
 Ok, now I got the three plots with a proper legend. I am not sure if I can use it because there is too much data in one plot, and you cannot really differentiate the colors.. Perhaps I need more clear colours or something, but that is for later..
 
+Or perhaps only have 3-4 site per plot!
+
 -------------------------------------
 # STEP 9: Plot of base types per site
 -------------------------------------
