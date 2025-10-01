@@ -2023,7 +2023,7 @@ Interpretation:
 
 #Type 13 (Flasks)
 
-These are flasks and I only have one registration!
+I collapsed flasks and bottles
 
 ```{r, echo=TRUE}
 
