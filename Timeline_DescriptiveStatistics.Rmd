@@ -128,6 +128,17 @@ head(ceramics_data)
 
 ```
 
+```{r}
+ggplot(ceramics_data,aes(actual_width))+
+  geom_histogram(binwidth = 2
+          )
+
+```
+
+NICK: In this step nick told me to try to find the size groups and confirm my own size groups a-e. When I change the binwidth in the code it changes the cm that is the threshold. So, if the binwidth is 10 (as my size groups) no real patterns emerge, but is I use 2 cm then some new groups appear.
+
+-> in general I need to explore statistically which size groups are in the material
+
 -----------------------------------------------------
 # STEP 1: Make a dataset for the descriptive analysis
 -----------------------------------------------------
