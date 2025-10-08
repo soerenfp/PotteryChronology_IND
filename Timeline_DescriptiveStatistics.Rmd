@@ -84,6 +84,8 @@ To better understand my data I have made a document to explore the data:
 # install.packages("rrtools")
 # install.packages("remotes")
 # install.packages("viridis")
+# install.packages("ggrepel")
+# install.packages("tidyverse")
 
 # Load necessary libraries:
 
@@ -102,7 +104,8 @@ library(openxlsx)
 library(vcd)
 library(reshape2)
 library(viridis)
-
+library(ggrepel)
+library(tidyverse)
 ```
 
 --------------------------------------------------------------------------------
@@ -128,16 +131,6 @@ head(ceramics_data)
 
 ```
 
-```{r}
-ggplot(ceramics_data,aes(actual_width))+
-  geom_histogram(binwidth = 2
-          )
-
-```
-
-NICK: In this step nick told me to try to find the size groups and confirm my own size groups a-e. When I change the binwidth in the code it changes the cm that is the threshold. So, if the binwidth is 10 (as my size groups) no real patterns emerge, but is I use 2 cm then some new groups appear.
-
--> in general I need to explore statistically which size groups are in the material
 
 -----------------------------------------------------
 # STEP 1: Make a dataset for the descriptive analysis
@@ -1248,7 +1241,7 @@ plot3_RS02 <- ggplot(data_third_third_RS02, aes(x = site_name, y = count, fill =
 #Print the plot
 plot3_RS02
 ```
-Ok, these plots need adjustments, but I now have a full plot of the rims pr site. I have some NAs from Karkarichinkat that I need to check out. Second, I need to decide if I really need the legend here, or if I can change it to the abbrivations
+Ok, these plots need adjustments, but I now have a full plot of the rims pr site. I have some NAs from Karkarichinkat that I need to check out. Second, I need to decide if I really need the legend here, or if I can change it to the abbreviations
 
 ```{r, echo=TRUE}
 library(dplyr)
@@ -1542,66 +1535,6 @@ for (site in site_names_SS01) {
 Damn I'm good!
 
 OBS: I just noticed that the colors are not consistent, so the last category is always yellow for an example. I need to change this so the colors and types are consistent. This applies to all my previous plots!
-
----------------------------------------------------------
-# STEP ??: Exploring the development of size through time
----------------------------------------------------------
-
-#Q in Chad: 
-"I have plotted my vessel in BC and AD terms (example: 250-100 BC, 150-300 AD) and I need to see the development of vessel sizes through time. How do I do this? Shall I change my BC terms in my spreadsheet to -250-100, or how?"
-
-#A from Chad
-To analyze the development of vessel sizes through time, it's essential to convert your BC and AD dates into a continuous numerical scale. This ensures that you can plot the data effectively and interpret trends over time. Here's how to handle it:
-
-- 1. Convert BC and AD into a Continuous Scale
-
-BC Dates: Represent BC dates as negative numbers. For example:
-250–100 BC → -250 to -100
-
-AD Dates: Represent AD dates as positive numbers. For example:
-150–300 AD → 150 to 300
-
-- 2. Adjust Your Spreadsheet
-
-Create two columns in your spreadsheet for the start date and end date of each time range:
-For 250–100 BC, enter -250 in the start column and -100 in the end column.
-For 150–300 AD, enter 150 in the start column and 300 in the end column.
-
-- 3. Calculate the Midpoint of Each Time Range
-
-Add a new column for the midpoint (average) of the time range:
-
-midpoint = ("start date" + "end date") / 2
-
-For example:
-For BC: -250 to -100: Midpoint = (−250+ −100)/2= -175
-For AD: 150 to 300: Midpoint = (150+300)/2= 225
-
-This will provide a single value for each vessel's time period, making it easier to analyze trends.
-
-#OBS: All the above has been done, and I have uploaded the results as a spredsheet named "03_timelinedata"
-
-- 4. Visualize Vessel Sizes Through Time
-
-Use the midpoint column as the x-axis (time) and vessel size (e.g., height, diameter, or volume) as the y-axis.
-
-Create a scatter plot, line plot, or boxplot using ggplot2 in R or your preferred plotting tool:
-
-```{r, echo=TRUE}
-ggplot(data, aes(x = midpoint, y = vessel_size)) +
-  geom_point() + 
-  geom_smooth(method = "loess", se = FALSE) +  # Optional trend line
-  labs(title = "Development of Vessel Sizes Over Time",
-       x = "Time (Years, BC/AD)",
-       y = "Vessel Size") +
-  theme_minimal()
-```
-
-- 5. Consider Trends
-
-Look for patterns, such as increases or decreases in size over time or abrupt changes during specific periods.
-
-Use color or shapes to differentiate vessel types, rim categories, or other attributes to add depth to the analysis.
 
 ---------------------------
 # Mean, median, range, SD #
@@ -2563,3 +2496,294 @@ Bars above the red dashed line (40%) indicate types with notably high variation 
 
 Bars well below the line suggest more controlled, standardized production.
 
+#Histogram of vessel size groups
+
+#Code by Nick
+
+```{r}
+ggplot(ceramics_data,aes(actual_width))+
+  geom_histogram(binwidth = 2
+          )
+
+```
+
+NICK: In this step nick told me to try to find the size groups and confirm my own size groups a-e. When I change the binwidth in the code it changes the cm that is the threshold. So, if the binwidth is 10 (as my size groups) no real patterns emerge, but is I use 2 cm then some new groups appear.
+
+-> in general I need to explore statistically which size groups are in the material
+
+#actual_width
+
+```{r, echo=TRUE}
+ggplot(
+  ceramics_data %>% filter(!is.na(actual_width) & actual_width != 0),
+  aes(x = actual_width)
+) +
+  geom_histogram(aes(y = after_stat(density)), binwidth = 2,
+                 fill = "lightblue", color = "black") +
+  geom_density(color = "red", size = 1.2) +
+  scale_x_continuous(breaks = seq(0, 60, by = 10)) +
+  labs(
+    title = "Distribution and Density of Actual Width",
+    x = "Actual Width (cm)",
+    y = "Density"
+  ) +
+  theme_minimal(base_size = 13)
+
+```
+
+Interpretation:
+
+(- I think I see there is four to five size groups: 10-15 cm / 15-20 cm / 25-30 cm / 35-40 cm / (55-60 cm))
+- After the red line was added I see two size groups: 10-15 cm / 25-30 cm
+- Most vessels are between 10-15 cm in width
+- There is a high variability in the material, with some smaller and many more wide vessels
+- there is a long tail towards higher widths, suggesting that there are many very wide vessels
+
+#actual_height
+
+```{r, echo=TRUE}
+ggplot(
+  ceramics_data %>% filter(!is.na(actual_height) & actual_height != 0),
+  aes(x = actual_height)
+) +
+  geom_histogram(aes(y = after_stat(density)), binwidth = 2,
+                 fill = "lightblue", color = "black") +
+  geom_density(color = "red", size = 1.2) +
+  scale_x_continuous(breaks = seq(0, 60, by = 10)) +
+  labs(
+    title = "Distribution and Density of Actual Height",
+    x = "Actual Height (cm)",
+    y = "Density"
+  ) +
+  theme_minimal(base_size = 13)
+
+```
+
+Interpretation:
+
+(- I think I see three size groups: 5-15 cm / 30-35 cm / 45-50 cm)
+- after the red line was added I see two size groups: 5-10 cm / 30-35 cm
+- Most of the vessels are 10 cm high
+- There is a high variability in the material with some smaller and many taller vessels
+- there is a long tail towards higher heights, suggesting that there are many very tall vessels
+
+
+#actual_diameter
+
+```{r, echo=TRUE}
+ggplot(
+  ceramics_data %>% filter(!is.na(actual_diameter) & actual_diameter != 0),
+  aes(x = actual_diameter)
+) +
+  geom_histogram(aes(y = after_stat(density)), binwidth = 2,
+                 fill = "lightblue", color = "black") +
+  geom_density(color = "red", size = 1.2) +
+  scale_x_continuous(breaks = seq(0, 60, by = 10)) +
+  labs(
+    title = "Distribution and Density of Actual Diameter",
+    x = "Actual Diameter (cm)",
+    y = "Density"
+  ) +
+  theme_minimal(base_size = 13)
+
+```
+
+Interpretation:
+
+(- I think I see four / five size groups: 10-15 cm / 15-20 cm / (20-25 cm) / 30-35 cm / 35-40 cm)
+- After the red line was added I see 2-3 size groups: 10-15 cm / 30-35 cm / (40-45 cm)
+- Most vessels have an orifice between 10-15 cm
+- There is a high variability in the material, with some smaller and many larger vessel orifices
+- There is a long tail towards higher orifice sizes, suggesting that there are many vessels with larger orifice sizes
+
+#Cluster Analysis: Vessel Types by 'width' and 'height' Categories
+
+Define optimal amount of clusters for the three parameters
+
+```{r, echo=TRUE}
+library(dplyr)
+library(cluster)   # for silhouette
+library(factoextra) # for fviz_nbclust
+
+# Prepare data
+size_data <- ceramics_data %>%
+  select(actual_width, actual_height, actual_diameter) %>%
+  filter(!is.na(actual_width) & !is.na(actual_height) & !is.na(actual_diameter) &
+         actual_width != 0 & actual_height != 0 & actual_diameter != 0)
+
+# Standardize numeric variables
+size_scaled <- scale(size_data)
+
+# Use fviz_nbclust to find optimal k (hierarchical + silhouette)
+fviz_nbclust(size_scaled, FUNcluster = hcut, method = "silhouette") +
+  labs(subtitle = "Optimal number of clusters by silhouette method")
+```
+My optimal number of clusters are 2
+
+
+```{r, echo=TRUE}
+# Load required packages
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+
+# Step 1: Prepare data
+size_data <- ceramics_data %>%
+  select(type_category, actual_width, actual_height) %>%
+  filter(!is.na(actual_width) & !is.na(actual_height) & actual_width != 0 & actual_height != 0)
+
+# Step 2: Standardize numeric variables for clustering
+size_scaled <- scale(size_data[, c("actual_width", "actual_height")])
+
+# Step 3: Hierarchical clustering
+dist_matrix <- dist(size_scaled)
+hclust_model <- hclust(dist_matrix, method = "ward.D2")
+
+# Step 4: Choose number of clusters (adjust as needed)
+k <- 2
+size_data$cluster <- cutree(hclust_model, k = k)
+
+# Step 5: Compute cluster centroids
+cluster_centroids <- size_data %>%
+  group_by(cluster) %>%
+  summarise(
+    mean_width = mean(actual_width, na.rm = TRUE),
+    mean_height = mean(actual_height, na.rm = TRUE)
+  )
+
+# Step 6: Plot clusters with colors by vessel type
+ggplot(size_data, aes(x = actual_width, y = actual_height, color = factor(type_category))) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_point(
+    data = cluster_centroids,
+    aes(x = mean_width, y = mean_height),
+    color = "black", size = 5, shape = 8
+  ) +
+  geom_text_repel(
+    data = cluster_centroids,
+    aes(x = mean_width, y = mean_height, label = paste("Cluster", cluster)),
+    color = "black", size = 4
+  ) +
+  labs(
+    title = "Cluster Analysis: Vessel Types by Size (Width vs Height)",
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)",
+    color = "Type Category"
+  ) +
+  theme_minimal(base_size = 13) +
+  scale_color_manual(values = rainbow(length(unique(size_data$type_category))))
+
+```
+
+Hmm, it is a little hard to see all the details
+
+#Cluster Analysis: Vessel Types by 'width' and 'height' Categories with cirles around the clusters
+
+```{r, echo=TRUE}
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+
+# Step 1: Prepare data
+size_data <- ceramics_data %>%
+  select(type_category, actual_width, actual_height) %>%
+  filter(!is.na(actual_width) & !is.na(actual_height) & actual_width != 0 & actual_height != 0)
+
+# Step 2: Standardize numeric variables for clustering
+size_scaled <- scale(size_data[, c("actual_width", "actual_height")])
+
+# Step 3: Hierarchical clustering
+dist_matrix <- dist(size_scaled)
+hclust_model <- hclust(dist_matrix, method = "ward.D2")
+
+# Step 4: Choose number of clusters
+k <- 2
+size_data$cluster <- cutree(hclust_model, k = k)
+
+# Step 5: Compute cluster centroids
+cluster_centroids <- size_data %>%
+  group_by(cluster) %>%
+  summarise(
+    mean_width = mean(actual_width, na.rm = TRUE),
+    mean_height = mean(actual_height, na.rm = TRUE)
+  )
+
+# Step 6: Plot clusters with colors by vessel type and circles around clusters
+ggplot(size_data, aes(x = actual_width, y = actual_height, color = factor(type_category))) +
+  geom_point(size = 3, alpha = 0.8) +
+  # Add ellipses around clusters
+  stat_ellipse(aes(group = cluster), type = "norm", linetype = 2, color = "black", size = 1, alpha = 0.2) +
+  geom_point(
+    data = cluster_centroids,
+    aes(x = mean_width, y = mean_height),
+    color = "black", size = 5, shape = 8
+  ) +
+  geom_text_repel(
+    data = cluster_centroids,
+    aes(x = mean_width, y = mean_height, label = paste("Cluster", cluster)),
+    color = "black", size = 4
+  ) +
+  labs(
+    title = "Cluster Analysis: Vessel Types by Size (Width vs Height)",
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)",
+    color = "Type Category"
+  ) +
+  theme_minimal(base_size = 13) +
+  scale_color_manual(values = rainbow(length(unique(size_data$type_category))))
+
+```
+
+#PCA
+
+```{r, echo=TRUE}
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+library(factoextra)
+
+# Step 1: Prepare data
+pca_data <- ceramics_data %>%
+  select(type_category, actual_width, actual_height, actual_diameter) %>%
+  filter(!is.na(actual_width) & !is.na(actual_height) & !is.na(actual_diameter) &
+         actual_width != 0 & actual_height != 0 & actual_diameter != 0)
+
+# Convert type_category to factor
+pca_data$type_category <- as.factor(pca_data$type_category)
+
+# Step 2: Perform PCA
+pca_res <- prcomp(pca_data[, c("actual_width", "actual_height", "actual_diameter")], scale. = TRUE)
+pca_scores <- as.data.frame(pca_res$x)
+pca_scores$type_category <- pca_data$type_category
+
+# Step 3: K-means clustering (k = 2)
+set.seed(123)
+k <- 2
+kmeans_res <- kmeans(scale(pca_data[, c("actual_width", "actual_height", "actual_diameter")]), centers = k, nstart = 25)
+pca_scores$cluster <- as.factor(kmeans_res$cluster)
+
+# Step 4: Cluster centroids in PCA space
+centroids <- pca_scores %>%
+  group_by(cluster) %>%
+  summarise(
+    PC1 = mean(PC1),
+    PC2 = mean(PC2)
+  )
+
+# Step 5: Plot PCA with clusters
+ggplot(pca_scores, aes(x = PC1, y = PC2, color = type_category)) +
+  geom_point(size = 3, alpha = 0.8) +
+  stat_ellipse(aes(group = cluster), type = "norm", linetype = 2, color = "black", alpha = 0.2) +
+  geom_point(data = centroids, aes(x = PC1, y = PC2), color = "black", size = 5, shape = 8) +
+  geom_text_repel(data = centroids, aes(x = PC1, y = PC2, label = paste("Cluster", cluster)),
+                  color = "black", size = 4) +
+  labs(
+    title = "PCA of Vessel Sizes with 2 Clusters",
+    x = "Principal Component 1",
+    y = "Principal Component 2",
+    color = "Type Category"
+  ) +
+  theme_minimal(base_size = 13) +
+  scale_color_manual(values = rainbow(length(unique(pca_scores$type_category))))
+
+```

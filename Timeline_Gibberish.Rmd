@@ -439,3 +439,63 @@ OBS: This interpretation was made using 4 clusters!
 - Vessel category 13-14 (flasks and bottles) does not have a lot of data, but mainly cluster in the smaller cat. 3 as expected
 - Vessel category 15 (Tellem tripods) mainly cluster in the lower cat. 3 as expected
 - Perhaps the centroids do not help me a lot??
+
+---------------------------------------------------------
+# STEP ??: Exploring the development of size through time
+---------------------------------------------------------
+
+#Q in Chad: 
+"I have plotted my vessel in BC and AD terms (example: 250-100 BC, 150-300 AD) and I need to see the development of vessel sizes through time. How do I do this? Shall I change my BC terms in my spreadsheet to -250-100, or how?"
+
+#A from Chad
+To analyze the development of vessel sizes through time, it's essential to convert your BC and AD dates into a continuous numerical scale. This ensures that you can plot the data effectively and interpret trends over time. Here's how to handle it:
+
+- 1. Convert BC and AD into a Continuous Scale
+
+BC Dates: Represent BC dates as negative numbers. For example:
+250–100 BC → -250 to -100
+
+AD Dates: Represent AD dates as positive numbers. For example:
+150–300 AD → 150 to 300
+
+- 2. Adjust Your Spreadsheet
+
+Create two columns in your spreadsheet for the start date and end date of each time range:
+For 250–100 BC, enter -250 in the start column and -100 in the end column.
+For 150–300 AD, enter 150 in the start column and 300 in the end column.
+
+- 3. Calculate the Midpoint of Each Time Range
+
+Add a new column for the midpoint (average) of the time range:
+
+midpoint = ("start date" + "end date") / 2
+
+For example:
+For BC: -250 to -100: Midpoint = (−250+ −100)/2= -175
+For AD: 150 to 300: Midpoint = (150+300)/2= 225
+
+This will provide a single value for each vessel's time period, making it easier to analyze trends.
+
+#OBS: All the above has been done, and I have uploaded the results as a spredsheet named "03_timelinedata"
+
+- 4. Visualize Vessel Sizes Through Time
+
+Use the midpoint column as the x-axis (time) and vessel size (e.g., height, diameter, or volume) as the y-axis.
+
+Create a scatter plot, line plot, or boxplot using ggplot2 in R or your preferred plotting tool:
+
+```{r, echo=TRUE}
+ggplot(data, aes(x = midpoint, y = vessel_size)) +
+  geom_point() + 
+  geom_smooth(method = "loess", se = FALSE) +  # Optional trend line
+  labs(title = "Development of Vessel Sizes Over Time",
+       x = "Time (Years, BC/AD)",
+       y = "Vessel Size") +
+  theme_minimal()
+```
+
+- 5. Consider Trends
+
+Look for patterns, such as increases or decreases in size over time or abrupt changes during specific periods.
+
+Use color or shapes to differentiate vessel types, rim categories, or other attributes to add depth to the analysis.
