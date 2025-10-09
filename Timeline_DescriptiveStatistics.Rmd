@@ -2511,6 +2511,8 @@ NICK: In this step nick told me to try to find the size groups and confirm my ow
 
 -> in general I need to explore statistically which size groups are in the material
 
+OBS: Try to do density curves per pot type!
+
 #actual_width
 
 ```{r, echo=TRUE}
@@ -2596,6 +2598,177 @@ Interpretation:
 - There is a high variability in the material, with some smaller and many larger vessel orifices
 - There is a long tail towards higher orifice sizes, suggesting that there are many vessels with larger orifice sizes
 
+```{r, echo=TRUE}
+library(ggplot2)
+library(dplyr)
+
+# Remove zeros and NAs first
+ceramics_data_clean <- ceramics_data %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_height = na_if(actual_height, 0)
+  ) %>%
+  filter(!is.na(actual_width), !is.na(actual_height), !is.na(type_category))
+
+# Density plot for Actual Width by Vessel Type
+ggplot(ceramics_data_clean, aes(x = actual_width, fill = factor(type_category))) +
+  geom_density(alpha = 0.5) +
+  labs(
+    title = "Density Plot of Actual Width by Vessel Type",
+    x = "Actual Width (cm)",
+    y = "Density",
+    fill = "Vessel Type"
+  ) +
+  theme_minimal(base_size = 13)
+
+# Density plot for Actual Height by Vessel Type
+ggplot(ceramics_data_clean, aes(x = actual_height, fill = factor(type_category))) +
+  geom_density(alpha = 0.5) +
+  labs(
+    title = "Density Plot of Actual Height by Vessel Type",
+    x = "Actual Height (cm)",
+    y = "Density",
+    fill = "Vessel Type"
+  ) +
+  theme_minimal(base_size = 13)
+
+```
+
+# Density plots by vessel type for width, height, and diameter
+
+```{r, echo=TRUE}
+library(ggplot2)
+library(dplyr)
+
+# Clean dataset: convert 0 to NA and remove missing values
+ceramics_data_clean <- ceramics_data %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_height = na_if(actual_height, 0),
+    actual_diameter = na_if(actual_diameter, 0)
+  ) %>%
+  filter(
+    !is.na(type_category),
+    !is.na(actual_width),
+    !is.na(actual_height),
+    !is.na(actual_diameter)
+  )
+
+# --- WIDTH ---
+ggplot(ceramics_data_clean, aes(x = actual_width, fill = factor(type_category))) +
+  geom_density(alpha = 0.7, color = "black") +
+  facet_wrap(~ type_category, scales = "free_y") +
+  labs(
+    title = "Density Plot of Actual Width by Vessel Type",
+    x = "Actual Width (cm)",
+    y = "Density"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+
+# --- HEIGHT ---
+ggplot(ceramics_data_clean, aes(x = actual_height, fill = factor(type_category))) +
+  geom_density(alpha = 0.7, color = "black") +
+  facet_wrap(~ type_category, scales = "free_y") +
+  labs(
+    title = "Density Plot of Actual Height by Vessel Type",
+    x = "Actual Height (cm)",
+    y = "Density"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+
+# --- DIAMETER ---
+ggplot(ceramics_data_clean, aes(x = actual_diameter, fill = factor(type_category))) +
+  geom_density(alpha = 0.7, color = "black") +
+  facet_wrap(~ type_category, scales = "free_y") +
+  labs(
+    title = "Density Plot of Actual Diameter by Vessel Type",
+    x = "Actual Diameter (cm)",
+    y = "Density"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+
+```
+
+Quick interpretation guide:
+
+Each panel shows the size variation of one vessel type.
+
+A narrow peak = consistent shape/size.
+
+A broad peak or multiple humps = greater variation or sub-groups within that type.
+
+Comparing across width, height, and diameter helps identify which dimension varies most within a type.
+
+# Combined Density Plot (Width, Height, Diameter) per Vessel Type
+
+```{r, echo=TRUE}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Clean dataset: replace 0 with NA, and remove incomplete rows
+ceramics_data_clean <- ceramics_data %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_height = na_if(actual_height, 0),
+    actual_diameter = na_if(actual_diameter, 0)
+  ) %>%
+  filter(
+    !is.na(type_category),
+    !is.na(actual_width),
+    !is.na(actual_height),
+    !is.na(actual_diameter)
+  )
+
+# Reshape data to long format for plotting all dimensions together
+ceramics_long <- ceramics_data_clean %>%
+  pivot_longer(
+    cols = c(actual_width, actual_height, actual_diameter),
+    names_to = "Measurement",
+    values_to = "Value"
+  )
+
+# Clean up labels
+ceramics_long$Measurement <- recode(
+  ceramics_long$Measurement,
+  actual_width = "Width",
+  actual_height = "Height",
+  actual_diameter = "Diameter"
+)
+
+# Combined density plot
+ggplot(ceramics_long, aes(x = Value, fill = Measurement)) +
+  geom_density(alpha = 0.5, color = "black") +
+  facet_wrap(~ type_category, scales = "free_y") +
+  scale_fill_manual(values = c("Width" = "#1f77b4", "Height" = "#2ca02c", "Diameter" = "#ff7f0e")) +
+  labs(
+    title = "Density Plot of Width, Height, and Diameter by Vessel Type",
+    x = "Measurement Value (cm)",
+    y = "Density",
+    fill = "Measurement"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "bottom",
+    panel.grid.minor = element_blank()
+  )
+
+```
+
+How to interpret:
+
+Each facet = one vessel type.
+
+Each color = a different dimension (Width, Height, Diameter).
+
+If one curve is narrower or shifted, it means that dimension is more consistent or larger/smaller than the others.
+
+Overlapping curves show similar size ranges; separated curves show different scaling patterns.
+
+
 #Cluster Analysis: Vessel Types by 'width' and 'height' Categories
 
 Define optimal amount of clusters for the three parameters
@@ -2676,6 +2849,8 @@ ggplot(size_data, aes(x = actual_width, y = actual_height, color = factor(type_c
 ```
 
 Hmm, it is a little hard to see all the details
+
+Perhaps I should only do the cluster analysis for types 1-11 and exclude the flasks and Tellem tripods?
 
 #Cluster Analysis: Vessel Types by 'width' and 'height' Categories with cirles around the clusters
 
@@ -2787,3 +2962,6 @@ ggplot(pca_scores, aes(x = PC1, y = PC2, color = type_category)) +
   scale_color_manual(values = rainbow(length(unique(pca_scores$type_category))))
 
 ```
+I must define what makes up the principal components! Perhaps I have too few criteria to make a PCA???
+
+
