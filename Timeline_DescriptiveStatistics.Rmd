@@ -86,6 +86,7 @@ To better understand my data I have made a document to explore the data:
 # install.packages("viridis")
 # install.packages("ggrepel")
 # install.packages("tidyverse")
+# install.packages("plotly")
 
 # Load necessary libraries:
 
@@ -106,6 +107,7 @@ library(reshape2)
 library(viridis)
 library(ggrepel)
 library(tidyverse)
+library(plotly)
 ```
 
 --------------------------------------------------------------------------------
@@ -2496,7 +2498,7 @@ Bars above the red dashed line (40%) indicate types with notably high variation 
 
 Bars well below the line suggest more controlled, standardized production.
 
-#Histogram of vessel size groups
+#Density plots of vessel size groups
 
 #Code by Nick
 
@@ -2509,7 +2511,9 @@ ggplot(ceramics_data,aes(actual_width))+
 
 NICK: In this step nick told me to try to find the size groups and confirm my own size groups a-e. When I change the binwidth in the code it changes the cm that is the threshold. So, if the binwidth is 10 (as my size groups) no real patterns emerge, but is I use 2 cm then some new groups appear.
 
--> in general I need to explore statistically which size groups are in the material
+NICK: I just do these analysis for confirming my 10cm size groups based on width!
+
+-> in general I need to explore statistically which size groups there can be in the material. 
 
 OBS: Try to do density curves per pot type!
 
@@ -2621,6 +2625,10 @@ ggplot(ceramics_data_clean, aes(x = actual_width, fill = factor(type_category)))
   ) +
   theme_minimal(base_size = 13)
 
+```
+Interpretation:
+
+```{r, echo=TRUE}
 # Density plot for Actual Height by Vessel Type
 ggplot(ceramics_data_clean, aes(x = actual_height, fill = factor(type_category))) +
   geom_density(alpha = 0.5) +
@@ -2633,6 +2641,8 @@ ggplot(ceramics_data_clean, aes(x = actual_height, fill = factor(type_category))
   theme_minimal(base_size = 13)
 
 ```
+
+Interpretation:
 
 # Density plots by vessel type for width, height, and diameter
 
@@ -2653,7 +2663,11 @@ ceramics_data_clean <- ceramics_data %>%
     !is.na(actual_height),
     !is.na(actual_diameter)
   )
+```
 
+Interpretation: 
+
+```{r, echo=TRUE}
 # --- WIDTH ---
 ggplot(ceramics_data_clean, aes(x = actual_width, fill = factor(type_category))) +
   geom_density(alpha = 0.7, color = "black") +
@@ -2665,6 +2679,11 @@ ggplot(ceramics_data_clean, aes(x = actual_width, fill = factor(type_category)))
   ) +
   theme_minimal(base_size = 13) +
   theme(legend.position = "none")
+```
+
+
+
+```{r, echo=TRUE}
 
 # --- HEIGHT ---
 ggplot(ceramics_data_clean, aes(x = actual_height, fill = factor(type_category))) +
@@ -2677,7 +2696,11 @@ ggplot(ceramics_data_clean, aes(x = actual_height, fill = factor(type_category))
   ) +
   theme_minimal(base_size = 13) +
   theme(legend.position = "none")
+```
 
+
+
+```{r, echo=TRUE}
 # --- DIAMETER ---
 ggplot(ceramics_data_clean, aes(x = actual_diameter, fill = factor(type_category))) +
   geom_density(alpha = 0.7, color = "black") +
@@ -2770,6 +2793,10 @@ Overlapping curves show similar size ranges; separated curves show different sca
 
 
 #Cluster Analysis: Vessel Types by 'width' and 'height' Categories
+
+NICK: before doing cluster analysis, define from the groups above which vessel types are worth clustering together (the ones that have more than one peak). So, do a cluster analysis per type group. 
+
+DO A CLUSTER ANALYSIS PER VESSEL TYPE GROUP!!!
 
 Define optimal amount of clusters for the three parameters
 
@@ -2906,6 +2933,239 @@ ggplot(size_data, aes(x = actual_width, y = actual_height, color = factor(type_c
   ) +
   theme_minimal(base_size = 13) +
   scale_color_manual(values = rainbow(length(unique(size_data$type_category))))
+
+```
+
+# Cluster analysis per vessel type
+
+First identify the optimal amount of clusters per vessel type
+
+What This Code Does
+
+- Loops through each unique vessel_type.
+
+- Runs PAM clustering (robust for your type of data).
+
+- Calculates the average silhouette width for k = 2–10.
+
+- Picks the k that gives the best cluster separation.
+
+- Prints the optimal cluster number per vessel type.
+
+- Skips vessel types with too few valid measurements.
+
+```{r, echo=TRUE}
+
+# Load required libraries
+library(cluster)
+library(factoextra)
+library(dplyr)
+
+# Clean the data: remove missing or zero values
+ceramics_clean <- ceramics_data %>%
+  filter(!is.na(actual_width), !is.na(actual_height), !is.na(actual_diameter)) %>%
+  filter(actual_width != 0, actual_height != 0, actual_diameter != 0)
+
+# Get unique type categories
+type_categories <- unique(ceramics_clean$type_category)
+
+# Create an empty list to store optimal cluster results
+optimal_clusters <- list()
+
+# Loop through each type category
+for (type in type_categories) {
+  cat("Analyzing:", type, "\n")
+  
+  # Subset data for the current type category
+  subset_data <- ceramics_clean %>%
+    filter(type_category == type)
+  
+  # Extract numeric variables for clustering
+  numeric_data <- subset_data %>%
+    select(actual_width, actual_height, actual_diameter)
+  
+  # Skip if not enough data points for clustering
+  if (nrow(numeric_data) < 3) {
+    cat("  ⚠️ Skipped:", type, "– not enough data points (n =", nrow(numeric_data), ")\n\n")
+    next
+  }
+  
+  # Compute silhouette widths for k = 2 to up to nrow(numeric_data) - 1
+  sil_width <- numeric()
+  max_k <- min(10, nrow(numeric_data) - 1)
+  
+  for (k in 2:max_k) {
+    pam_fit <- pam(numeric_data, k)
+    sil_width[k] <- pam_fit$silinfo$avg.width
+  }
+  
+  # Determine the optimal number of clusters (max silhouette width)
+  best_k <- which.max(sil_width)
+  
+  # Store the result
+  optimal_clusters[[as.character(type)]] <- best_k
+  
+  cat("  ✅ Optimal number of clusters for", type, ":", best_k, "\n\n")
+}
+
+# Print summary of results
+cat("📊 Summary of optimal cluster numbers per type category:\n")
+print(optimal_clusters)
+
+```
+
+Plot in bar plot
+
+```{r, echo=TRUE}
+
+# Load required packages
+library(dplyr)
+library(cluster)
+library(ggplot2)
+library(purrr)
+library(tidyr)
+
+# Remove zeros and NAs
+ceramics_filtered <- ceramics_data %>%
+  mutate(across(c(actual_width, actual_diameter, actual_height), ~na_if(.x, 0))) %>%
+  filter(!is.na(actual_width) & !is.na(actual_diameter) & !is.na(actual_height))
+
+# Function to find optimal number of clusters (using silhouette method)
+find_optimal_clusters <- function(df) {
+  numeric_data <- df %>% select(actual_width, actual_diameter, actual_height)
+  max_k <- min(10, nrow(numeric_data) - 1)
+  if (nrow(numeric_data) < 3) return(NA)
+  
+  sil_values <- map_dbl(2:max_k, function(k) {
+    pam_fit <- pam(numeric_data, k)
+    pam_fit$silinfo$avg.width
+  })
+  optimal_k <- which.max(sil_values) + 1
+  return(optimal_k)
+}
+
+# Calculate optimal clusters per vessel type + count datapoints
+optimal_clusters <- ceramics_filtered %>%
+  group_by(type_category) %>%
+  summarise(
+    n_datapoints = n(),
+    optimal_k = find_optimal_clusters(cur_data())
+  ) %>%
+  ungroup()
+
+# Plot results with datapoint count
+ggplot(optimal_clusters, aes(x = factor(type_category), y = optimal_k)) +
+  geom_col(fill = "steelblue") +
+  geom_text(aes(label = paste0("k=", optimal_k, "\n(n=", n_datapoints, ")")),
+            vjust = -0.6, fontface = "bold", size = 4) +
+  labs(
+    title = "Optimal Number of Clusters per Vessel Type",
+    x = "Vessel Type",
+    y = "Optimal Cluster Count"
+  ) +
+  expand_limits(y = max(optimal_clusters$optimal_k, na.rm = TRUE) + 2) +  # add top space
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+```
+
+Hmm, very interesting that number 6 (tightly-closed) has so many clusters!
+
+number of points Comment:
+
+< 10	Very risky — treat clusters as exploratory only
+10–30	Possible, but interpret very cautiously
+30–50	Can see preliminary structure, better if few clusters
+50+	Solid for typical morphological clustering, more reliable
+
+I set the limit to 10 - if I have fewer data points I must be very careful! 
+
+#Type 1
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(ggplot2)
+library(cluster)
+
+# --- Step 1: Filter for one vessel type ---
+# Change "1" to any other type number you want to analyze
+vessel_type_selected <- 1
+
+ceramics_subset <- ceramics_data %>%
+  filter(type_category == vessel_type_selected) %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_diameter = na_if(actual_diameter, 0),
+    actual_height = na_if(actual_height, 0)
+  ) %>%
+  drop_na(actual_width, actual_diameter, actual_height)
+
+# --- Step 2: Scale numeric data for fair comparison ---
+scaled_data <- scale(ceramics_subset[, c("actual_width", "actual_diameter", "actual_height")])
+
+# --- Step 3: Perform clustering (k = 2, since that was optimal before) ---
+set.seed(123)
+kmeans_result <- kmeans(scaled_data, centers = 2, nstart = 25)
+
+ceramics_subset$cluster <- as.factor(kmeans_result$cluster)
+
+# --- Step 4: Visualize the clusters ---
+ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.8) +
+  labs(
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected),
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)",
+    color = "Cluster"
+  ) +
+  theme_minimal(base_size = 13)
+
+```
+
+# Type 2
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(ggplot2)
+library(cluster)
+
+# --- Step 1: Filter for one vessel type ---
+# Change "1" to any other type number you want to analyze
+vessel_type_selected <- 2
+
+ceramics_subset <- ceramics_data %>%
+  filter(type_category == vessel_type_selected) %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_diameter = na_if(actual_diameter, 0),
+    actual_height = na_if(actual_height, 0)
+  ) %>%
+  drop_na(actual_width, actual_diameter, actual_height)
+
+# --- Step 2: Scale numeric data for fair comparison ---
+scaled_data <- scale(ceramics_subset[, c("actual_width", "actual_diameter", "actual_height")])
+
+# --- Step 3: Perform clustering (k = 2, since that was optimal before) ---
+set.seed(123)
+kmeans_result <- kmeans(scaled_data, centers = 4, nstart = 25)
+
+ceramics_subset$cluster <- as.factor(kmeans_result$cluster)
+
+# --- Step 4: Visualize the clusters ---
+ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.8) +
+  labs(
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected),
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)",
+    color = "Cluster"
+  ) +
+  theme_minimal(base_size = 13)
 
 ```
 
