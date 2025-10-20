@@ -2665,15 +2665,13 @@ ceramics_data_clean <- ceramics_data %>%
   )
 ```
 
-Interpretation: 
-
 ```{r, echo=TRUE}
 # --- WIDTH ---
 ggplot(ceramics_data_clean, aes(x = actual_width, fill = factor(type_category))) +
   geom_density(alpha = 0.7, color = "black") +
   facet_wrap(~ type_category, scales = "free_y") +
   labs(
-    title = "Density Plot of Actual Width by Vessel Type",
+    title = "Density Plot of Total Width by Vessel Type",
     x = "Actual Width (cm)",
     y = "Density"
   ) +
@@ -2681,7 +2679,7 @@ ggplot(ceramics_data_clean, aes(x = actual_width, fill = factor(type_category)))
   theme(legend.position = "none")
 ```
 
-
+Interpretation: 
 
 ```{r, echo=TRUE}
 
@@ -2690,7 +2688,7 @@ ggplot(ceramics_data_clean, aes(x = actual_height, fill = factor(type_category))
   geom_density(alpha = 0.7, color = "black") +
   facet_wrap(~ type_category, scales = "free_y") +
   labs(
-    title = "Density Plot of Actual Height by Vessel Type",
+    title = "Density Plot of Total Height by Vessel Type",
     x = "Actual Height (cm)",
     y = "Density"
   ) +
@@ -2706,8 +2704,8 @@ ggplot(ceramics_data_clean, aes(x = actual_diameter, fill = factor(type_category
   geom_density(alpha = 0.7, color = "black") +
   facet_wrap(~ type_category, scales = "free_y") +
   labs(
-    title = "Density Plot of Actual Diameter by Vessel Type",
-    x = "Actual Diameter (cm)",
+    title = "Density Plot of Orifice Diameter by Vessel Type",
+    x = "Orifice Diameter (cm)",
     y = "Density"
   ) +
   theme_minimal(base_size = 13) +
@@ -2766,9 +2764,9 @@ ceramics_long$Measurement <- recode(
 ggplot(ceramics_long, aes(x = Value, fill = Measurement)) +
   geom_density(alpha = 0.5, color = "black") +
   facet_wrap(~ type_category, scales = "free_y") +
-  scale_fill_manual(values = c("Width" = "#1f77b4", "Height" = "#2ca02c", "Diameter" = "#ff7f0e")) +
+  scale_fill_manual(values = c("Width" = "#1f77b4", "Height" = "#2ca02c", "Orifice" = "#ff7f0e")) +
   labs(
-    title = "Density Plot of Width, Height, and Diameter by Vessel Type",
+    title = "Density Plot of Width, Height, and Orifice Diameter by Vessel Type",
     x = "Measurement Value (cm)",
     y = "Density",
     fill = "Measurement"
@@ -2794,9 +2792,9 @@ Overlapping curves show similar size ranges; separated curves show different sca
 
 #Cluster Analysis: Vessel Types by 'width' and 'height' Categories
 
-NICK: before doing cluster analysis, define from the groups above which vessel types are worth clustering together (the ones that have more than one peak). So, do a cluster analysis per type group. 
+NICK: before doing cluster analysis, define from the groups above which vessel types are worth clustering together (the ones that have more than one peak). Then do a cluster analysis per type group. 
 
-DO A CLUSTER ANALYSIS PER VESSEL TYPE GROUP!!!
+NOTE: Perhaps identify which sites the vessels represent!
 
 Define optimal amount of clusters for the three parameters
 
@@ -2878,6 +2876,8 @@ ggplot(size_data, aes(x = actual_width, y = actual_height, color = factor(type_c
 Hmm, it is a little hard to see all the details
 
 Perhaps I should only do the cluster analysis for types 1-11 and exclude the flasks and Tellem tripods?
+
+Right now I am comparing apples and bananas, above!
 
 #Cluster Analysis: Vessel Types by 'width' and 'height' Categories with cirles around the clusters
 
@@ -3074,7 +3074,7 @@ ggplot(optimal_clusters, aes(x = factor(type_category), y = optimal_k)) +
 
 Hmm, very interesting that number 6 (tightly-closed) has so many clusters!
 
-number of points Comment:
+number of data points Comment:
 
 < 10	Very risky — treat clusters as exploratory only
 10–30	Possible, but interpret very cautiously
@@ -3083,7 +3083,34 @@ number of points Comment:
 
 I set the limit to 10 - if I have fewer data points I must be very careful! 
 
-#Type 1
+Cluster analysis risk assessment:
+
+GOOD (50+)
+
+- Type 5
+- Type 4
+- Type 2
+
+MEDIUM (30-50)
+
+- Type 7
+- Type 1
+
+BAD (10-30)
+
+- Type 6
+- Type 10
+- Type 3
+- Type 9
+- Type 8
+
+VERY RISKY / Discarded (<10)
+
+- Type 14 (+15)
+- Type 11
+- Type 13
+
+#Type 1 (k -> 2)
 
 ```{r, echo=TRUE}
 
@@ -3093,10 +3120,10 @@ library(cluster)
 
 # --- Step 1: Filter for one vessel type ---
 # Change "1" to any other type number you want to analyze
-vessel_type_selected <- 1
+vessel_type_selected1 <- 1
 
-ceramics_subset <- ceramics_data %>%
-  filter(type_category == vessel_type_selected) %>%
+ceramics_subset1 <- ceramics_data %>%
+  filter(type_category == vessel_type_selected1) %>%
   mutate(
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
@@ -3105,19 +3132,19 @@ ceramics_subset <- ceramics_data %>%
   drop_na(actual_width, actual_diameter, actual_height)
 
 # --- Step 2: Scale numeric data for fair comparison ---
-scaled_data <- scale(ceramics_subset[, c("actual_width", "actual_diameter", "actual_height")])
+scaled_data1 <- scale(ceramics_subset1[, c("actual_width", "actual_diameter", "actual_height")])
 
 # --- Step 3: Perform clustering (k = 2, since that was optimal before) ---
 set.seed(123)
-kmeans_result <- kmeans(scaled_data, centers = 2, nstart = 25)
+kmeans_result1 <- kmeans(scaled_data1, centers = 2, nstart = 25)
 
-ceramics_subset$cluster <- as.factor(kmeans_result$cluster)
+ceramics_subset1$cluster <- as.factor(kmeans_result1$cluster)
 
 # --- Step 4: Visualize the clusters ---
-ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster)) +
+ggplot(ceramics_subset1, aes(x = actual_width, y = actual_height, color = cluster)) +
   geom_point(size = 3, alpha = 0.8) +
   labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected),
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected1),
     x = "Actual Width (cm)",
     y = "Actual Height (cm)",
     color = "Cluster"
@@ -3126,7 +3153,62 @@ ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster
 
 ```
 
-# Type 2
+# Add vessel numbers (If I need it)
+
+```{r, echo=TRUE}
+library(dplyr)
+library(ggplot2)
+library(cluster)
+library(ggrepel)
+
+# --- Step 1: Filter for one vessel type ---
+vessel_type_selected1 <- 1
+
+ceramics_subset1 <- ceramics_data %>%
+  filter(type_category == vessel_type_selected1) %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_diameter = na_if(actual_diameter, 0),
+    actual_height = na_if(actual_height, 0)
+  ) %>%
+  drop_na(actual_width, actual_diameter, actual_height)
+
+# --- Step 2: Scale numeric data for fair comparison ---
+scaled_data1 <- scale(ceramics_subset1[, c("actual_width", "actual_diameter", "actual_height")])
+
+# --- Step 3: Perform clustering (k = 2, since that was optimal before) ---
+set.seed(123)
+kmeans_result1 <- kmeans(scaled_data1, centers = 2, nstart = 25)
+
+ceramics_subset1$cluster <- as.factor(kmeans_result1$cluster)
+
+# --- Step 4: Plot with smart vessel labels ---
+ggplot(ceramics_subset1, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_text_repel(
+    aes(label = vessel_number),
+    size = 2.5,
+    color = "black",
+    max.overlaps = Inf,
+    segment.color = "grey70",
+    segment.size = 0.3,
+    box.padding = 0.2,
+    point.padding = 0.2
+  ) +
+  labs(
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected1),
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)",
+    color = "Cluster"
+  ) +
+  theme_minimal(base_size = 13)
+
+```
+
+Hmm, I need to decide if I need the vessel numbers..
+
+
+# Type 2 (k -> 4)
 
 ```{r, echo=TRUE}
 
@@ -3136,10 +3218,10 @@ library(cluster)
 
 # --- Step 1: Filter for one vessel type ---
 # Change "1" to any other type number you want to analyze
-vessel_type_selected <- 2
+vessel_type_selected2 <- 2
 
-ceramics_subset <- ceramics_data %>%
-  filter(type_category == vessel_type_selected) %>%
+ceramics_subset2 <- ceramics_data %>%
+  filter(type_category == vessel_type_selected2) %>%
   mutate(
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
@@ -3148,19 +3230,19 @@ ceramics_subset <- ceramics_data %>%
   drop_na(actual_width, actual_diameter, actual_height)
 
 # --- Step 2: Scale numeric data for fair comparison ---
-scaled_data <- scale(ceramics_subset[, c("actual_width", "actual_diameter", "actual_height")])
+scaled_data2 <- scale(ceramics_subset2[, c("actual_width", "actual_diameter", "actual_height")])
 
-# --- Step 3: Perform clustering (k = 2, since that was optimal before) ---
+# --- Step 3: Perform clustering (k = 4, since that was optimal before) ---
 set.seed(123)
-kmeans_result <- kmeans(scaled_data, centers = 4, nstart = 25)
+kmeans_result2 <- kmeans(scaled_data2, centers = 4, nstart = 25)
 
-ceramics_subset$cluster <- as.factor(kmeans_result$cluster)
+ceramics_subset2$cluster <- as.factor(kmeans_result2$cluster)
 
 # --- Step 4: Visualize the clusters ---
-ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster)) +
+ggplot(ceramics_subset2, aes(x = actual_width, y = actual_height, color = cluster)) +
   geom_point(size = 3, alpha = 0.8) +
   labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected),
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected2),
     x = "Actual Width (cm)",
     y = "Actual Height (cm)",
     color = "Cluster"
@@ -3168,6 +3250,369 @@ ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster
   theme_minimal(base_size = 13)
 
 ```
+
+Interpretation:
+
+# Type 3 (k -> 3)
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(ggplot2)
+library(cluster)
+
+# --- Step 1: Filter for one vessel type ---
+# Change "1" to any other type number you want to analyze
+vessel_type_selected3 <- 3
+
+ceramics_subset3 <- ceramics_data %>%
+  filter(type_category == vessel_type_selected3) %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_diameter = na_if(actual_diameter, 0),
+    actual_height = na_if(actual_height, 0)
+  ) %>%
+  drop_na(actual_width, actual_diameter, actual_height)
+
+# --- Step 2: Scale numeric data for fair comparison ---
+scaled_data3 <- scale(ceramics_subset3[, c("actual_width", "actual_diameter", "actual_height")])
+
+# --- Step 3: Perform clustering (k = 4, since that was optimal before) ---
+set.seed(123)
+kmeans_result3 <- kmeans(scaled_data3, centers = 3, nstart = 25)
+
+ceramics_subset3$cluster <- as.factor(kmeans_result3$cluster)
+
+# --- Step 4: Visualize the clusters ---
+ggplot(ceramics_subset3, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.8) +
+  labs(
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected3),
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)",
+    color = "Cluster"
+  ) +
+  theme_minimal(base_size = 13)
+
+```
+
+Interpretaion:
+
+# Type 4 (k -> 2)
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(ggplot2)
+library(cluster)
+
+# --- Step 1: Filter for one vessel type ---
+# Change "1" to any other type number you want to analyze
+vessel_type_selected4 <- 4
+
+ceramics_subset4 <- ceramics_data %>%
+  filter(type_category == vessel_type_selected4) %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_diameter = na_if(actual_diameter, 0),
+    actual_height = na_if(actual_height, 0)
+  ) %>%
+  drop_na(actual_width, actual_diameter, actual_height)
+
+# --- Step 2: Scale numeric data for fair comparison ---
+scaled_data4 <- scale(ceramics_subset4[, c("actual_width", "actual_diameter", "actual_height")])
+
+# --- Step 3: Perform clustering (k = 4, since that was optimal before) ---
+set.seed(123)
+kmeans_result4 <- kmeans(scaled_data4, centers = 2, nstart = 25)
+
+ceramics_subset4$cluster <- as.factor(kmeans_result4$cluster)
+
+# --- Step 4: Visualize the clusters ---
+ggplot(ceramics_subset4, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.8) +
+  labs(
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected4),
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)",
+    color = "Cluster"
+  ) +
+  theme_minimal(base_size = 13)
+
+```
+
+Interpretation:
+
+# Type 5 (k -> 2)
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(ggplot2)
+library(cluster)
+
+# --- Step 1: Filter for one vessel type ---
+# Change "1" to any other type number you want to analyze
+vessel_type_selected5 <- 5
+
+ceramics_subset5 <- ceramics_data %>%
+  filter(type_category == vessel_type_selected5) %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_diameter = na_if(actual_diameter, 0),
+    actual_height = na_if(actual_height, 0)
+  ) %>%
+  drop_na(actual_width, actual_diameter, actual_height)
+
+# --- Step 2: Scale numeric data for fair comparison ---
+scaled_data5 <- scale(ceramics_subset5[, c("actual_width", "actual_diameter", "actual_height")])
+
+# --- Step 3: Perform clustering (k = 4, since that was optimal before) ---
+set.seed(123)
+kmeans_result5 <- kmeans(scaled_data5, centers = 2, nstart = 25)
+
+ceramics_subset5$cluster <- as.factor(kmeans_result5$cluster)
+
+# --- Step 4: Visualize the clusters ---
+ggplot(ceramics_subset5, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.8) +
+  labs(
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected5),
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)",
+    color = "Cluster"
+  ) +
+  theme_minimal(base_size = 13)
+
+```
+
+Interpretation:
+
+#Type 6 (k -> 8)
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(ggplot2)
+library(cluster)
+
+# --- Step 1: Filter for one vessel type ---
+# Change "1" to any other type number you want to analyze
+vessel_type_selected6 <- 6
+
+ceramics_subset6 <- ceramics_data %>%
+  filter(type_category == vessel_type_selected6) %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_diameter = na_if(actual_diameter, 0),
+    actual_height = na_if(actual_height, 0)
+  ) %>%
+  drop_na(actual_width, actual_diameter, actual_height)
+
+# --- Step 2: Scale numeric data for fair comparison ---
+scaled_data6 <- scale(ceramics_subset6[, c("actual_width", "actual_diameter", "actual_height")])
+
+# --- Step 3: Perform clustering (k = 4, since that was optimal before) ---
+set.seed(123)
+kmeans_result6 <- kmeans(scaled_data6, centers = 8, nstart = 25)
+
+ceramics_subset6$cluster <- as.factor(kmeans_result6$cluster)
+
+# --- Step 4: Visualize the clusters ---
+ggplot(ceramics_subset6, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.8) +
+  labs(
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected6),
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)",
+    color = "Cluster"
+  ) +
+  theme_minimal(base_size = 13)
+
+```
+
+Interpretation: I do not know if 8 clusters are the correct number..
+
+# Type 7 (k -> 2)
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(ggplot2)
+library(cluster)
+
+# --- Step 1: Filter for one vessel type ---
+# Change "1" to any other type number you want to analyze
+vessel_type_selected7 <- 7
+
+ceramics_subset7 <- ceramics_data %>%
+  filter(type_category == vessel_type_selected7) %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_diameter = na_if(actual_diameter, 0),
+    actual_height = na_if(actual_height, 0)
+  ) %>%
+  drop_na(actual_width, actual_diameter, actual_height)
+
+# --- Step 2: Scale numeric data for fair comparison ---
+scaled_data7 <- scale(ceramics_subset7[, c("actual_width", "actual_diameter", "actual_height")])
+
+# --- Step 3: Perform clustering (k = 4, since that was optimal before) ---
+set.seed(123)
+kmeans_result7 <- kmeans(scaled_data7, centers = 2, nstart = 25)
+
+ceramics_subset7$cluster <- as.factor(kmeans_result7$cluster)
+
+# --- Step 4: Visualize the clusters ---
+ggplot(ceramics_subset7, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.8) +
+  labs(
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected7),
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)",
+    color = "Cluster"
+  ) +
+  theme_minimal(base_size = 13)
+
+```
+
+Interpretation:
+
+# Type 8 (k -> 2)
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(ggplot2)
+library(cluster)
+
+# --- Step 1: Filter for one vessel type ---
+# Change "1" to any other type number you want to analyze
+vessel_type_selected8 <- 8
+
+ceramics_subset8 <- ceramics_data %>%
+  filter(type_category == vessel_type_selected8) %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_diameter = na_if(actual_diameter, 0),
+    actual_height = na_if(actual_height, 0)
+  ) %>%
+  drop_na(actual_width, actual_diameter, actual_height)
+
+# --- Step 2: Scale numeric data for fair comparison ---
+scaled_data8 <- scale(ceramics_subset8[, c("actual_width", "actual_diameter", "actual_height")])
+
+# --- Step 3: Perform clustering (k = 4, since that was optimal before) ---
+set.seed(123)
+kmeans_result8 <- kmeans(scaled_data8, centers = 2, nstart = 25)
+
+ceramics_subset8$cluster <- as.factor(kmeans_result8$cluster)
+
+# --- Step 4: Visualize the clusters ---
+ggplot(ceramics_subset8, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.8) +
+  labs(
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected8),
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)",
+    color = "Cluster"
+  ) +
+  theme_minimal(base_size = 13)
+
+```
+
+Interpretation:
+
+# Type 9 (k -> 2)
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(ggplot2)
+library(cluster)
+
+# --- Step 1: Filter for one vessel type ---
+# Change "1" to any other type number you want to analyze
+vessel_type_selected9 <- 9
+
+ceramics_subset9 <- ceramics_data %>%
+  filter(type_category == vessel_type_selected9) %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_diameter = na_if(actual_diameter, 0),
+    actual_height = na_if(actual_height, 0)
+  ) %>%
+  drop_na(actual_width, actual_diameter, actual_height)
+
+# --- Step 2: Scale numeric data for fair comparison ---
+scaled_data9 <- scale(ceramics_subset9[, c("actual_width", "actual_diameter", "actual_height")])
+
+# --- Step 3: Perform clustering (k = 4, since that was optimal before) ---
+set.seed(123)
+kmeans_result9 <- kmeans(scaled_data9, centers = 2, nstart = 25)
+
+ceramics_subset9$cluster <- as.factor(kmeans_result9$cluster)
+
+# --- Step 4: Visualize the clusters ---
+ggplot(ceramics_subset9, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.8) +
+  labs(
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected9),
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)",
+    color = "Cluster"
+  ) +
+  theme_minimal(base_size = 13)
+
+```
+
+Interpretation:
+
+# Type 10 (k -> 2)
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(ggplot2)
+library(cluster)
+
+# --- Step 1: Filter for one vessel type ---
+# Change "1" to any other type number you want to analyze
+vessel_type_selected10 <- 10
+
+ceramics_subset10 <- ceramics_data %>%
+  filter(type_category == vessel_type_selected10) %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_diameter = na_if(actual_diameter, 0),
+    actual_height = na_if(actual_height, 0)
+  ) %>%
+  drop_na(actual_width, actual_diameter, actual_height)
+
+# --- Step 2: Scale numeric data for fair comparison ---
+scaled_data10 <- scale(ceramics_subset10[, c("actual_width", "actual_diameter", "actual_height")])
+
+# --- Step 3: Perform clustering (k = 4, since that was optimal before) ---
+set.seed(123)
+kmeans_result10 <- kmeans(scaled_data10, centers = 2, nstart = 25)
+
+ceramics_subset10$cluster <- as.factor(kmeans_result10$cluster)
+
+# --- Step 4: Visualize the clusters ---
+ggplot(ceramics_subset10, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.8) +
+  labs(
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected10),
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)",
+    color = "Cluster"
+  ) +
+  theme_minimal(base_size = 13)
+
+```
+
+Interpretation:
+
 
 #PCA
 
