@@ -2713,16 +2713,6 @@ ggplot(ceramics_data_clean, aes(x = actual_diameter, fill = factor(type_category
 
 ```
 
-Quick interpretation guide:
-
-Each panel shows the size variation of one vessel type.
-
-A narrow peak = consistent shape/size.
-
-A broad peak or multiple humps = greater variation or sub-groups within that type.
-
-Comparing across width, height, and diameter helps identify which dimension varies most within a type.
-
 # Combined Density Plot (Width, Height, Diameter) per Vessel Type
 
 ```{r, echo=TRUE}
@@ -2760,13 +2750,17 @@ ceramics_long$Measurement <- recode(
   actual_diameter = "Diameter"
 )
 
-# Combined density plot
+# Combined density plot (with correct legend)
 ggplot(ceramics_long, aes(x = Value, fill = Measurement)) +
   geom_density(alpha = 0.5, color = "black") +
   facet_wrap(~ type_category, scales = "free_y") +
-  scale_fill_manual(values = c("Width" = "#1f77b4", "Height" = "#2ca02c", "Orifice" = "#ff7f0e")) +
+  scale_fill_manual(values = c(
+    "Width" = "#1f77b4",
+    "Height" = "#2ca02c",
+    "Diameter" = "#ff7f0e"   # corrected label here
+  )) +
   labs(
-    title = "Density Plot of Width, Height, and Orifice Diameter by Vessel Type",
+    title = "Density Plot of Width, Height, and Diameter by Vessel Type",
     x = "Measurement Value (cm)",
     y = "Density",
     fill = "Measurement"
@@ -2782,12 +2776,34 @@ ggplot(ceramics_long, aes(x = Value, fill = Measurement)) +
 How to interpret:
 
 Each facet = one vessel type.
-
 Each color = a different dimension (Width, Height, Diameter).
-
 If one curve is narrower or shifted, it means that dimension is more consistent or larger/smaller than the others.
-
 Overlapping curves show similar size ranges; separated curves show different scaling patterns.
+
+Quick interpretation guide:
+
+- Each panel shows the size variation of one vessel type.
+- A narrow peak = consistent shape/size.
+- A broad peak or multiple humps = greater variation or sub-groups within that type.
+Comparing across width, height, and diameter helps identify which dimension varies most within a type.
+
+Detailed interpretation guide:
+
+To interpret a density plot, look at the x-axis for the range of values, the y-axis for the relative likelihood of those values, and the curve's shape to understand the distribution's central tendency (peak), variability (width), and outliers (tails). 
+
+Height of the curve: A taller peak indicates a higher concentration of data points, meaning that the values on the x-axis at that point are more frequent or likely. 
+
+Peak(s): The highest point(s) of the curve represent the mode(s) of the distribution, which are the most common values. 
+
+Width: The width of the curve indicates variability or spread in the data. A wider curve suggests greater spread, while a narrower curve suggests less spread. 
+
+Shape: The overall shape provides insight into the distribution.
+  Symmetry: A symmetric curve (like the classic bell curve) suggests the data is evenly distributed around the mean.
+  Skewness: A curve that is stretched to one side (e.g., a long right tail) indicates a skewed distribution, meaning there are   more extreme values on that side. 
+
+Tails: The tails of the curve show the probability of observing extreme values. Long tails suggest a higher probability of outliers. 
+
+Area under the curve: The total area under the curve is always equal to 1, representing 100% of the data. The area under a specific section of the curve can be used to estimate the percentage of data that falls within that range. 
 
 
 #Cluster Analysis: Vessel Types by 'width' and 'height' Categories
