@@ -2793,7 +2793,9 @@ To interpret a density plot, look at the x-axis for the range of values, the y-a
 
 Height of the curve: A taller peak indicates a higher concentration of data points, meaning that the values on the x-axis at that point are more frequent or likely. 
 
-Peak(s): The highest point(s) of the curve represent the mode(s) of the distribution, which are the most common values. 
+Peak(s): The highest point(s) of the curve represent the mode(s) of the distribution, which are the most common values.
+
+A "bell curve" with two peaks: also called a bimodal distribution, indicates that your data represents two different populations or groups rather than a single, continuous one. To interpret it, you should acknowledge it as two separate distributions, identify the location of each peak, and use the mean and standard deviation with caution, as they will likely be misleading averages that fall between the two groups
 
 Width: The width of the curve indicates variability or spread in the data. A wider curve suggests greater spread, while a narrower curve suggests less spread. 
 
