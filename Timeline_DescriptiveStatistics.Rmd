@@ -3171,61 +3171,6 @@ ggplot(ceramics_subset1, aes(x = actual_width, y = actual_height, color = cluste
 
 ```
 
-# Add vessel numbers (If I need it)
-
-```{r, echo=TRUE}
-library(dplyr)
-library(ggplot2)
-library(cluster)
-library(ggrepel)
-
-# --- Step 1: Filter for one vessel type ---
-vessel_type_selected1 <- 1
-
-ceramics_subset1 <- ceramics_data %>%
-  filter(type_category == vessel_type_selected1) %>%
-  mutate(
-    actual_width = na_if(actual_width, 0),
-    actual_diameter = na_if(actual_diameter, 0),
-    actual_height = na_if(actual_height, 0)
-  ) %>%
-  drop_na(actual_width, actual_diameter, actual_height)
-
-# --- Step 2: Scale numeric data for fair comparison ---
-scaled_data1 <- scale(ceramics_subset1[, c("actual_width", "actual_diameter", "actual_height")])
-
-# --- Step 3: Perform clustering (k = 2, since that was optimal before) ---
-set.seed(123)
-kmeans_result1 <- kmeans(scaled_data1, centers = 2, nstart = 25)
-
-ceramics_subset1$cluster <- as.factor(kmeans_result1$cluster)
-
-# --- Step 4: Plot with smart vessel labels ---
-ggplot(ceramics_subset1, aes(x = actual_width, y = actual_height, color = cluster)) +
-  geom_point(size = 3, alpha = 0.8) +
-  geom_text_repel(
-    aes(label = vessel_number),
-    size = 2.5,
-    color = "black",
-    max.overlaps = Inf,
-    segment.color = "grey70",
-    segment.size = 0.3,
-    box.padding = 0.2,
-    point.padding = 0.2
-  ) +
-  labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected1),
-    x = "Actual Width (cm)",
-    y = "Actual Height (cm)",
-    color = "Cluster"
-  ) +
-  theme_minimal(base_size = 13)
-
-```
-
-Hmm, I need to decide if I need the vessel numbers..
-
-
 # Type 2 (k -> 4)
 
 ```{r, echo=TRUE}
@@ -3626,6 +3571,412 @@ ggplot(ceramics_subset10, aes(x = actual_width, y = actual_height, color = clust
     color = "Cluster"
   ) +
   theme_minimal(base_size = 13)
+
+```
+
+Interpretation:
+
+# Cluster analysis of the interesting types
+
+- Type 3
+- Type 6
+(- Type 7)
+- Type 9
+- Type 10
+(- Type 11)
+
+
+# Type 3 (k -> 3)
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+
+# --- Step 1: Filter for one vessel type ---
+vessel_type_selected3 <- 3
+
+ceramics_subset3 <- ceramics_data %>%
+  filter(type_category == vessel_type_selected3) %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_diameter = na_if(actual_diameter, 0),
+    actual_height = na_if(actual_height, 0)
+  ) %>%
+  drop_na(actual_width, actual_diameter, actual_height)
+
+# --- Step 2: Scale numeric data for fair comparison ---
+scaled_data3 <- scale(ceramics_subset3[, c("actual_width", "actual_diameter", "actual_height")])
+
+# --- Step 3: Perform clustering ---
+set.seed(123)
+kmeans_result3 <- kmeans(scaled_data3, centers = 3, nstart = 25)
+
+ceramics_subset3$cluster <- as.factor(kmeans_result3$cluster)
+
+# --- Step 4: Plot (Width × Height) with Cluster Colors and Orifice Diameter as Size ---
+ggplot(ceramics_subset3, aes(
+  x = actual_width,
+  y = actual_height,
+  color = cluster,
+  size = actual_diameter
+)) +
+  geom_point(alpha = 0.85, shape = 21, fill = NA, stroke = 1.2) +
+  geom_text_repel(
+    aes(label = vessel_number),
+    size = 2.5,
+    color = "black",
+    max.overlaps = Inf,
+    segment.color = "grey70",
+    segment.size = 0.3,
+    box.padding = 0.2,
+    point.padding = 0.2
+  ) +
+  scale_color_brewer(
+    name = "Cluster",
+    palette = "Set2"
+  ) +
+  scale_size_continuous(
+    name = "Orifice diameter (cm)",
+    range = c(2, 6)
+  ) +
+  labs(
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected3),
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold", size = 14)
+  )
+
+# --- Step 5: List vessel numbers per cluster ---
+vessel_list_by_cluster3 <- ceramics_subset3 %>%
+  group_by(cluster) %>%
+  summarise(vessel_numbers = paste(vessel_number, collapse = ", ")) %>%
+  arrange(cluster)
+
+# View the result in R console
+print(vessel_list_by_cluster3)
+
+```
+
+Interpretation:
+
+
+#Type 6 (k -> 8)
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+
+# --- Step 1: Filter for one vessel type ---
+vessel_type_selected6 <- 6
+
+ceramics_subset6 <- ceramics_data %>%
+  filter(type_category == vessel_type_selected6) %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_diameter = na_if(actual_diameter, 0),
+    actual_height = na_if(actual_height, 0)
+  ) %>%
+  drop_na(actual_width, actual_diameter, actual_height)
+
+# --- Step 2: Scale numeric data for fair comparison ---
+scaled_data6 <- scale(ceramics_subset6[, c("actual_width", "actual_diameter", "actual_height")])
+
+# --- Step 3: Perform clustering ---
+set.seed(123)
+kmeans_result6 <- kmeans(scaled_data6, centers = 8, nstart = 25)
+
+ceramics_subset6$cluster <- as.factor(kmeans_result6$cluster)
+
+# --- Step 4: Plot (Width × Height) with Cluster Colors and Orifice Diameter as Size ---
+ggplot(ceramics_subset6, aes(
+  x = actual_width,
+  y = actual_height,
+  color = cluster,
+  size = actual_diameter
+)) +
+  geom_point(alpha = 0.85, shape = 21, fill = NA, stroke = 1.2) +
+  geom_text_repel(
+    aes(label = vessel_number),
+    size = 2.5,
+    color = "black",
+    max.overlaps = Inf,
+    segment.color = "grey70",
+    segment.size = 0.3,
+    box.padding = 0.2,
+    point.padding = 0.2
+  ) +
+  scale_color_brewer(
+    name = "Cluster",
+    palette = "Set2"
+  ) +
+  scale_size_continuous(
+    name = "Orifice diameter (cm)",
+    range = c(2, 6)
+  ) +
+  labs(
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected6),
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold", size = 14)
+  )
+
+# --- Step 5: List vessel numbers per cluster ---
+vessel_list_by_cluster <- ceramics_subset6 %>%
+  group_by(cluster) %>%
+  summarise(vessel_numbers = paste(vessel_number, collapse = ", ")) %>%
+  arrange(cluster)
+
+# View the result in R console
+print(vessel_list_by_cluster)
+
+```
+
+Interpretation:
+
+# Type 7 (k -> 2)
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+
+# --- Step 1: Filter for one vessel type ---
+vessel_type_selected7 <- 7
+
+ceramics_subset7 <- ceramics_data %>%
+  filter(type_category == vessel_type_selected7) %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_diameter = na_if(actual_diameter, 0),
+    actual_height = na_if(actual_height, 0)
+  ) %>%
+  drop_na(actual_width, actual_diameter, actual_height)
+
+# --- Step 2: Scale numeric data for fair comparison ---
+scaled_data7 <- scale(ceramics_subset7[, c("actual_width", "actual_diameter", "actual_height")])
+
+# --- Step 3: Perform clustering ---
+set.seed(123)
+kmeans_result7 <- kmeans(scaled_data7, centers = 2, nstart = 25)
+
+ceramics_subset7$cluster <- as.factor(kmeans_result7$cluster)
+
+# --- Step 4: Plot (Width × Height) with Cluster Colors and Orifice Diameter as Size ---
+ggplot(ceramics_subset7, aes(
+  x = actual_width,
+  y = actual_height,
+  color = cluster,
+  size = actual_diameter
+)) +
+  geom_point(alpha = 0.85, shape = 21, fill = NA, stroke = 1.2) +
+  geom_text_repel(
+    aes(label = vessel_number),
+    size = 2.5,
+    color = "black",
+    max.overlaps = Inf,
+    segment.color = "grey70",
+    segment.size = 0.3,
+    box.padding = 0.2,
+    point.padding = 0.2
+  ) +
+  scale_color_brewer(
+    name = "Cluster",
+    palette = "Set2"
+  ) +
+  scale_size_continuous(
+    name = "Orifice diameter (cm)",
+    range = c(2, 6)
+  ) +
+  labs(
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected7),
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold", size = 14)
+  )
+
+# --- Step 5: List vessel numbers per cluster ---
+vessel_list_by_cluster7 <- ceramics_subset7 %>%
+  group_by(cluster) %>%
+  summarise(vessel_numbers = paste(vessel_number, collapse = ", ")) %>%
+  arrange(cluster)
+
+# View the result in R console
+print(vessel_list_by_cluster7)
+
+```
+
+Interpretation:
+
+# Type 9 (k -> 2)
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+
+# --- Step 1: Filter for one vessel type ---
+vessel_type_selected9 <- 9
+
+ceramics_subset9 <- ceramics_data %>%
+  filter(type_category == vessel_type_selected9) %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_diameter = na_if(actual_diameter, 0),
+    actual_height = na_if(actual_height, 0)
+  ) %>%
+  drop_na(actual_width, actual_diameter, actual_height)
+
+# --- Step 2: Scale numeric data for fair comparison ---
+scaled_data9 <- scale(ceramics_subset9[, c("actual_width", "actual_diameter", "actual_height")])
+
+# --- Step 3: Perform clustering ---
+set.seed(123)
+kmeans_result9 <- kmeans(scaled_data9, centers = 2, nstart = 25)
+
+ceramics_subset9$cluster <- as.factor(kmeans_result9$cluster)
+
+# --- Step 4: Plot (Width × Height) with Cluster Colors and Orifice Diameter as Size ---
+ggplot(ceramics_subset9, aes(
+  x = actual_width,
+  y = actual_height,
+  color = cluster,
+  size = actual_diameter
+)) +
+  geom_point(alpha = 0.85, shape = 21, fill = NA, stroke = 1.2) +
+  geom_text_repel(
+    aes(label = vessel_number),
+    size = 2.5,
+    color = "black",
+    max.overlaps = Inf,
+    segment.color = "grey70",
+    segment.size = 0.3,
+    box.padding = 0.2,
+    point.padding = 0.2
+  ) +
+  scale_color_brewer(
+    name = "Cluster",
+    palette = "Set2"
+  ) +
+  scale_size_continuous(
+    name = "Orifice diameter (cm)",
+    range = c(2, 6)
+  ) +
+  labs(
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected9),
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold", size = 14)
+  )
+
+# --- Step 5: List vessel numbers per cluster ---
+vessel_list_by_cluster9 <- ceramics_subset9 %>%
+  group_by(cluster) %>%
+  summarise(vessel_numbers = paste(vessel_number, collapse = ", ")) %>%
+  arrange(cluster)
+
+# View the result in R console
+print(vessel_list_by_cluster9)
+
+```
+
+Interpretation:
+
+# Type 10 (k -> 2)
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+
+# --- Step 1: Filter for one vessel type ---
+vessel_type_selected10 <- 10
+
+ceramics_subset10 <- ceramics_data %>%
+  filter(type_category == vessel_type_selected10) %>%
+  mutate(
+    actual_width = na_if(actual_width, 0),
+    actual_diameter = na_if(actual_diameter, 0),
+    actual_height = na_if(actual_height, 0)
+  ) %>%
+  drop_na(actual_width, actual_diameter, actual_height)
+
+# --- Step 2: Scale numeric data for fair comparison ---
+scaled_data10 <- scale(ceramics_subset10[, c("actual_width", "actual_diameter", "actual_height")])
+
+# --- Step 3: Perform clustering ---
+set.seed(123)
+kmeans_result10 <- kmeans(scaled_data10, centers = 2, nstart = 25)
+
+ceramics_subset10$cluster <- as.factor(kmeans_result10$cluster)
+
+# --- Step 4: Plot (Width × Height) with Cluster Colors and Orifice Diameter as Size ---
+ggplot(ceramics_subset10, aes(
+  x = actual_width,
+  y = actual_height,
+  color = cluster,
+  size = actual_diameter
+)) +
+  geom_point(alpha = 0.85, shape = 21, fill = NA, stroke = 1.2) +
+  geom_text_repel(
+    aes(label = vessel_number),
+    size = 2.5,
+    color = "black",
+    max.overlaps = Inf,
+    segment.color = "grey70",
+    segment.size = 0.3,
+    box.padding = 0.2,
+    point.padding = 0.2
+  ) +
+  scale_color_brewer(
+    name = "Cluster",
+    palette = "Set2"
+  ) +
+  scale_size_continuous(
+    name = "Orifice diameter (cm)",
+    range = c(2, 6)
+  ) +
+  labs(
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected10),
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold", size = 14)
+  )
+
+# --- Step 5: List vessel numbers per cluster ---
+vessel_list_by_cluster10 <- ceramics_subset10 %>%
+  group_by(cluster) %>%
+  summarise(vessel_numbers = paste(vessel_number, collapse = ", ")) %>%
+  arrange(cluster)
+
+# View the result in R console
+print(vessel_list_by_cluster10)
 
 ```
 
