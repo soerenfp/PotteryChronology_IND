@@ -107,7 +107,6 @@ library(viridis)
 library(ggrepel)
 library(tidyverse)
 library(plotly)
-library(rrtools)
 ```
 
 --------------------------------------------------------------------------------
