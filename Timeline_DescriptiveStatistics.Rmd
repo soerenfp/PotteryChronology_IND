@@ -87,6 +87,7 @@ To better understand my data I have made a document to explore the data:
 # install.packages("ggrepel")
 # install.packages("tidyverse")
 # install.packages("plotly")
+# install.packages("ggforce")
 
 # Load necessary libraries:
 
@@ -107,6 +108,7 @@ library(viridis)
 library(ggrepel)
 library(tidyverse)
 library(plotly)
+library(ggforce)
 ```
 
 --------------------------------------------------------------------------------
@@ -2945,7 +2947,7 @@ ggplot(size_data, aes(x = actual_width, y = actual_height, color = factor(type_c
 
 ```
 
-# Cluster analysis per vessel type
+# Cluster analysis per vessel type only including width, height and orifice
 
 First identify the optimal amount of clusters per vessel type
 
@@ -3023,65 +3025,137 @@ print(optimal_clusters)
 
 ```
 
-Plot in bar plot
+# More detailed clustering including the three measured parameters + rim and base
+
+I used PAM (Partitioning Around Medoids) clustering — also known as k-medoids — in combination with the Gower distance metric.
+
+#Distance metric: Gower distance
+
+Gower distance (via the daisy() function in R’s cluster package) allows you to mix:
+
+Numeric variables (e.g., actual_width, actual_diameter, actual_height)
+
+Categorical variables (e.g., rim_category, base_category)
+
+It scales all variables automatically and computes pairwise dissimilarities between observations.
+
+🔹 Formula (simplified idea):
+Each variable contributes between 0 and 1 to the distance, depending on whether two vessels differ (for categorical variables) or how far apart they are proportionally (for numeric variables).
+Then these are averaged per pair of vessels.
+
+This makes Gower ideal for archaeological datasets that mix quantitative and typological attributes
+
+#PAM clustering
+
+Clustering algorithm: PAM (Partitioning Around Medoids)
+
+PAM is conceptually similar to k-means, but:
+
+- It uses medoids (real observations) instead of centroids (mean points).
+
+- It works with any distance matrix, including non-Euclidean ones like Gower.
+
+- It’s robust to outliers — very important when dealing with rare or atypical vessel types.
+
+The code uses "pam(gower_dist, k)" which clusters the vessels based on their Gower dissimilarity matrix.
 
 ```{r, echo=TRUE}
 
-# Load required packages
+# --- Load Libraries ---
 library(dplyr)
 library(cluster)
 library(ggplot2)
 library(purrr)
 library(tidyr)
 
-# Remove zeros and NAs
+# Prepare data: clean zeros, NAs, and set up categorical variables
 ceramics_filtered <- ceramics_data %>%
-  mutate(across(c(actual_width, actual_diameter, actual_height), ~na_if(.x, 0))) %>%
+  mutate(
+    across(c(actual_width, actual_diameter, actual_height), ~na_if(.x, 0)),
+    rim_category = as.factor(rim_category),
+    base_category = if_else(is.na(base_category) | base_category == "", "Bro", base_category),
+    base_category = as.factor(base_category)
+  ) %>%
   filter(!is.na(actual_width) & !is.na(actual_diameter) & !is.na(actual_height))
 
-# Function to find optimal number of clusters (using silhouette method)
-find_optimal_clusters <- function(df) {
-  numeric_data <- df %>% select(actual_width, actual_diameter, actual_height)
-  max_k <- min(10, nrow(numeric_data) - 1)
-  if (nrow(numeric_data) < 3) return(NA)
+# Function to find optimal clusters (mixed numeric + categorical)
+find_optimal_clusters_mixed <- function(df) {
+  mixed_data <- df %>% select(actual_width, actual_diameter, actual_height, rim_category, base_category)
+  gower_dist <- daisy(mixed_data, metric = "gower")
+  max_k <- min(10, nrow(df) - 1)
+  if (nrow(df) < 3) return(NA)
   
   sil_values <- map_dbl(2:max_k, function(k) {
-    pam_fit <- pam(numeric_data, k)
+    pam_fit <- pam(gower_dist, k)
     pam_fit$silinfo$avg.width
   })
   optimal_k <- which.max(sil_values) + 1
   return(optimal_k)
 }
 
-# Calculate optimal clusters per vessel type + count datapoints
+# Calculate optimal clusters per vessel type
 optimal_clusters <- ceramics_filtered %>%
   group_by(type_category) %>%
   summarise(
     n_datapoints = n(),
-    optimal_k = find_optimal_clusters(cur_data())
+    optimal_k = find_optimal_clusters_mixed(cur_data())
   ) %>%
   ungroup()
 
-# Plot results with datapoint count
+# 🔹 Assign clusters and list vessels, rim types, and base types
+clustered_data <- ceramics_filtered %>%
+  group_by(type_category) %>%
+  group_modify(~{
+    mixed_data <- .x %>% select(actual_width, actual_diameter, actual_height, rim_category, base_category)
+    gower_dist <- daisy(mixed_data, metric = "gower")
+    
+    optimal_k <- find_optimal_clusters_mixed(.x)
+    if (is.na(optimal_k) || optimal_k < 2) {
+      .x$cluster <- 1
+    } else {
+      pam_fit <- pam(gower_dist, optimal_k)
+      .x$cluster <- pam_fit$clustering
+    }
+    .x
+  }) %>%
+  ungroup()
+
+# 🔸 Print summary table of clusters by site and vessel
+cluster_summary <- clustered_data %>%
+  group_by(site_name, type_category, cluster) %>%
+  summarise(
+    vessel_numbers = paste(unique(vessel_number), collapse = ", "),
+    rim_types = paste(unique(rim_category), collapse = ", "),
+    base_types = paste(unique(base_category), collapse = ", "),
+    .groups = "drop"
+  )
+
+# Show the table in console
+print(cluster_summary, n = Inf)
+
+# 🔹 Plot: Optimal number of clusters per vessel type
 ggplot(optimal_clusters, aes(x = factor(type_category), y = optimal_k)) +
   geom_col(fill = "steelblue") +
   geom_text(aes(label = paste0("k=", optimal_k, "\n(n=", n_datapoints, ")")),
-            vjust = -0.6, fontface = "bold", size = 4) +
+            vjust = -0.6, fontface = "plain", size = 3) +
   labs(
     title = "Optimal Number of Clusters per Vessel Type",
     x = "Vessel Type",
     y = "Optimal Cluster Count"
   ) +
-  expand_limits(y = max(optimal_clusters$optimal_k, na.rm = TRUE) + 2) +  # add top space
+  expand_limits(y = max(optimal_clusters$optimal_k, na.rm = TRUE) + 2) +
   theme_minimal(base_size = 14) +
   theme(
     plot.title = element_text(face = "bold"),
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
+
 ```
 
-Hmm, very interesting that number 6 (tightly-closed) has so many clusters!
+WAY better!!
+
+OBS: When there is no data on the base of the vessel then they are treated as having a round base (Bro)
 
 number of data points Comment:
 
@@ -3119,41 +3193,92 @@ VERY RISKY / Discarded (<10)
 - Type 11
 - Type 13
 
-#Type 1 (k -> 2)
+#Type 1
 
 ```{r, echo=TRUE}
 
 library(dplyr)
-library(ggplot2)
 library(cluster)
+library(ggplot2)
 
 # --- Step 1: Filter for one vessel type ---
-# Change "1" to any other type number you want to analyze
-vessel_type_selected1 <- 1
+vessel_type_selected <- 1  # change this to analyze another vessel type
 
-ceramics_subset1 <- ceramics_data %>%
-  filter(type_category == vessel_type_selected1) %>%
+ceramics_subset <- ceramics_data %>%
+  filter(type_category == vessel_type_selected) %>%
   mutate(
+    base_category = ifelse(is.na(base_category), "Bro", base_category),  # Treat NA as "Bro" (round)
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
-    actual_height = na_if(actual_height, 0)
+    actual_height = na_if(actual_height, 0),
+    rim_category = as.factor(rim_category),
+    base_category = as.factor(base_category)
   ) %>%
   drop_na(actual_width, actual_diameter, actual_height)
 
-# --- Step 2: Scale numeric data for fair comparison ---
-scaled_data1 <- scale(ceramics_subset1[, c("actual_width", "actual_diameter", "actual_height")])
+# --- Step 2: Compute Gower distance for mixed data ---
+gower_dist <- daisy(
+  ceramics_subset[, c("actual_width", "actual_diameter", "actual_height", "rim_category", "base_category")],
+  metric = "gower"
+)
 
-# --- Step 3: Perform clustering (k = 2, since that was optimal before) ---
-set.seed(123)
-kmeans_result1 <- kmeans(scaled_data1, centers = 2, nstart = 25)
+# --- Step 3: Determine optimal number of clusters (2–10) ---
+sil_widths <- numeric(10)
+for (k in 2:10) {
+  pam_fit <- pam(gower_dist, diss = TRUE, k = k)
+  sil_widths[k] <- pam_fit$silinfo$avg.width
+}
+optimal_k <- which.max(sil_widths)
+cat("Optimal number of clusters:", optimal_k, "\n")
 
-ceramics_subset1$cluster <- as.factor(kmeans_result1$cluster)
+# --- Step 4: Perform clustering using optimal k ---
+final_pam <- pam(gower_dist, diss = TRUE, k = optimal_k)
+ceramics_subset$cluster <- as.factor(final_pam$clustering)
 
-# --- Step 4: Visualize the clusters ---
-ggplot(ceramics_subset1, aes(x = actual_width, y = actual_height, color = cluster)) +
-  geom_point(size = 3, alpha = 0.8) +
+# --- Step 5: Print detailed cluster summary table ---
+cluster_summary <- ceramics_subset %>%
+  select(vessel_number, site_name, rim_category, base_category, cluster) %>%
+  arrange(cluster, site_name)
+
+cat("\n=== Cluster Summary Table ===\n")
+print(cluster_summary, n = nrow(cluster_summary))
+
+# --- Step 6: Cluster dependency profiles (means, medians, min–max, etc.) ---
+cluster_profiles <- ceramics_subset %>%
+  group_by(cluster) %>%
+  summarise(
+    n = n(),
+    mean_width = mean(actual_width, na.rm = TRUE),
+    median_width = median(actual_width, na.rm = TRUE),
+    min_width = min(actual_width, na.rm = TRUE),
+    max_width = max(actual_width, na.rm = TRUE),
+    sd_width = sd(actual_width, na.rm = TRUE),
+
+    mean_diameter = mean(actual_diameter, na.rm = TRUE),
+    median_diameter = median(actual_diameter, na.rm = TRUE),
+    min_diameter = min(actual_diameter, na.rm = TRUE),
+    max_diameter = max(actual_diameter, na.rm = TRUE),
+    sd_diameter = sd(actual_diameter, na.rm = TRUE),
+
+    mean_height = mean(actual_height, na.rm = TRUE),
+    median_height = median(actual_height, na.rm = TRUE),
+    min_height = min(actual_height, na.rm = TRUE),
+    max_height = max(actual_height, na.rm = TRUE),
+    sd_height = sd(actual_height, na.rm = TRUE),
+
+    most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
+    most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
+  )
+
+cat("\n=== Cluster Dependency Summary ===\n")
+print(cluster_profiles, n = nrow(cluster_profiles))
+
+# --- Step 7: Visualize clusters ---
+ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.9) +
   labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected1),
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected),
+    subtitle = paste("Optimal clusters (k) =", optimal_k),
     x = "Actual Width (cm)",
     y = "Actual Height (cm)",
     color = "Cluster"
@@ -3162,41 +3287,92 @@ ggplot(ceramics_subset1, aes(x = actual_width, y = actual_height, color = cluste
 
 ```
 
-# Type 2 (k -> 4)
+# Type 2
 
 ```{r, echo=TRUE}
 
 library(dplyr)
-library(ggplot2)
 library(cluster)
+library(ggplot2)
 
 # --- Step 1: Filter for one vessel type ---
-# Change "1" to any other type number you want to analyze
-vessel_type_selected2 <- 2
+vessel_type_selected <- 2  # change this to analyze another vessel type
 
-ceramics_subset2 <- ceramics_data %>%
-  filter(type_category == vessel_type_selected2) %>%
+ceramics_subset <- ceramics_data %>%
+  filter(type_category == vessel_type_selected) %>%
   mutate(
+    base_category = ifelse(is.na(base_category), "Bro", base_category),  # Treat NA as "Bro" (round)
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
-    actual_height = na_if(actual_height, 0)
+    actual_height = na_if(actual_height, 0),
+    rim_category = as.factor(rim_category),
+    base_category = as.factor(base_category)
   ) %>%
   drop_na(actual_width, actual_diameter, actual_height)
 
-# --- Step 2: Scale numeric data for fair comparison ---
-scaled_data2 <- scale(ceramics_subset2[, c("actual_width", "actual_diameter", "actual_height")])
+# --- Step 2: Compute Gower distance for mixed data ---
+gower_dist <- daisy(
+  ceramics_subset[, c("actual_width", "actual_diameter", "actual_height", "rim_category", "base_category")],
+  metric = "gower"
+)
 
-# --- Step 3: Perform clustering (k = 4, since that was optimal before) ---
-set.seed(123)
-kmeans_result2 <- kmeans(scaled_data2, centers = 4, nstart = 25)
+# --- Step 3: Determine optimal number of clusters (2–10) ---
+sil_widths <- numeric(10)
+for (k in 2:10) {
+  pam_fit <- pam(gower_dist, diss = TRUE, k = k)
+  sil_widths[k] <- pam_fit$silinfo$avg.width
+}
+optimal_k <- which.max(sil_widths)
+cat("Optimal number of clusters:", optimal_k, "\n")
 
-ceramics_subset2$cluster <- as.factor(kmeans_result2$cluster)
+# --- Step 4: Perform clustering using optimal k ---
+final_pam <- pam(gower_dist, diss = TRUE, k = optimal_k)
+ceramics_subset$cluster <- as.factor(final_pam$clustering)
 
-# --- Step 4: Visualize the clusters ---
-ggplot(ceramics_subset2, aes(x = actual_width, y = actual_height, color = cluster)) +
-  geom_point(size = 3, alpha = 0.8) +
+# --- Step 5: Print detailed cluster summary table ---
+cluster_summary <- ceramics_subset %>%
+  select(vessel_number, site_name, rim_category, base_category, cluster) %>%
+  arrange(cluster, site_name)
+
+cat("\n=== Cluster Summary Table ===\n")
+print(cluster_summary, n = nrow(cluster_summary))
+
+# --- Step 6: Cluster dependency profiles (means, medians, min–max, etc.) ---
+cluster_profiles <- ceramics_subset %>%
+  group_by(cluster) %>%
+  summarise(
+    n = n(),
+    mean_width = mean(actual_width, na.rm = TRUE),
+    median_width = median(actual_width, na.rm = TRUE),
+    min_width = min(actual_width, na.rm = TRUE),
+    max_width = max(actual_width, na.rm = TRUE),
+    sd_width = sd(actual_width, na.rm = TRUE),
+
+    mean_diameter = mean(actual_diameter, na.rm = TRUE),
+    median_diameter = median(actual_diameter, na.rm = TRUE),
+    min_diameter = min(actual_diameter, na.rm = TRUE),
+    max_diameter = max(actual_diameter, na.rm = TRUE),
+    sd_diameter = sd(actual_diameter, na.rm = TRUE),
+
+    mean_height = mean(actual_height, na.rm = TRUE),
+    median_height = median(actual_height, na.rm = TRUE),
+    min_height = min(actual_height, na.rm = TRUE),
+    max_height = max(actual_height, na.rm = TRUE),
+    sd_height = sd(actual_height, na.rm = TRUE),
+
+    most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
+    most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
+  )
+
+cat("\n=== Cluster Dependency Summary ===\n")
+print(cluster_profiles, n = nrow(cluster_profiles))
+
+# --- Step 7: Visualize clusters ---
+ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.9) +
   labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected2),
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected),
+    subtitle = paste("Optimal clusters (k) =", optimal_k),
     x = "Actual Width (cm)",
     y = "Actual Height (cm)",
     color = "Cluster"
@@ -3207,41 +3383,92 @@ ggplot(ceramics_subset2, aes(x = actual_width, y = actual_height, color = cluste
 
 Interpretation:
 
-# Type 3 (k -> 3)
+# Type 3
 
 ```{r, echo=TRUE}
 
 library(dplyr)
-library(ggplot2)
 library(cluster)
+library(ggplot2)
 
 # --- Step 1: Filter for one vessel type ---
-# Change "1" to any other type number you want to analyze
-vessel_type_selected3 <- 3
+vessel_type_selected <- 3  # change this to analyze another vessel type
 
-ceramics_subset3 <- ceramics_data %>%
-  filter(type_category == vessel_type_selected3) %>%
+ceramics_subset <- ceramics_data %>%
+  filter(type_category == vessel_type_selected) %>%
   mutate(
+    base_category = ifelse(is.na(base_category), "Bro", base_category),  # Treat NA as "Bro" (round)
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
-    actual_height = na_if(actual_height, 0)
+    actual_height = na_if(actual_height, 0),
+    rim_category = as.factor(rim_category),
+    base_category = as.factor(base_category)
   ) %>%
   drop_na(actual_width, actual_diameter, actual_height)
 
-# --- Step 2: Scale numeric data for fair comparison ---
-scaled_data3 <- scale(ceramics_subset3[, c("actual_width", "actual_diameter", "actual_height")])
+# --- Step 2: Compute Gower distance for mixed data ---
+gower_dist <- daisy(
+  ceramics_subset[, c("actual_width", "actual_diameter", "actual_height", "rim_category", "base_category")],
+  metric = "gower"
+)
 
-# --- Step 3: Perform clustering (k = 4, since that was optimal before) ---
-set.seed(123)
-kmeans_result3 <- kmeans(scaled_data3, centers = 3, nstart = 25)
+# --- Step 3: Determine optimal number of clusters (2–10) ---
+sil_widths <- numeric(10)
+for (k in 2:10) {
+  pam_fit <- pam(gower_dist, diss = TRUE, k = k)
+  sil_widths[k] <- pam_fit$silinfo$avg.width
+}
+optimal_k <- which.max(sil_widths)
+cat("Optimal number of clusters:", optimal_k, "\n")
 
-ceramics_subset3$cluster <- as.factor(kmeans_result3$cluster)
+# --- Step 4: Perform clustering using optimal k ---
+final_pam <- pam(gower_dist, diss = TRUE, k = optimal_k)
+ceramics_subset$cluster <- as.factor(final_pam$clustering)
 
-# --- Step 4: Visualize the clusters ---
-ggplot(ceramics_subset3, aes(x = actual_width, y = actual_height, color = cluster)) +
-  geom_point(size = 3, alpha = 0.8) +
+# --- Step 5: Print detailed cluster summary table ---
+cluster_summary <- ceramics_subset %>%
+  select(vessel_number, site_name, rim_category, base_category, cluster) %>%
+  arrange(cluster, site_name)
+
+cat("\n=== Cluster Summary Table ===\n")
+print(cluster_summary, n = nrow(cluster_summary))
+
+# --- Step 6: Cluster dependency profiles (means, medians, min–max, etc.) ---
+cluster_profiles <- ceramics_subset %>%
+  group_by(cluster) %>%
+  summarise(
+    n = n(),
+    mean_width = mean(actual_width, na.rm = TRUE),
+    median_width = median(actual_width, na.rm = TRUE),
+    min_width = min(actual_width, na.rm = TRUE),
+    max_width = max(actual_width, na.rm = TRUE),
+    sd_width = sd(actual_width, na.rm = TRUE),
+
+    mean_diameter = mean(actual_diameter, na.rm = TRUE),
+    median_diameter = median(actual_diameter, na.rm = TRUE),
+    min_diameter = min(actual_diameter, na.rm = TRUE),
+    max_diameter = max(actual_diameter, na.rm = TRUE),
+    sd_diameter = sd(actual_diameter, na.rm = TRUE),
+
+    mean_height = mean(actual_height, na.rm = TRUE),
+    median_height = median(actual_height, na.rm = TRUE),
+    min_height = min(actual_height, na.rm = TRUE),
+    max_height = max(actual_height, na.rm = TRUE),
+    sd_height = sd(actual_height, na.rm = TRUE),
+
+    most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
+    most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
+  )
+
+cat("\n=== Cluster Dependency Summary ===\n")
+print(cluster_profiles, n = nrow(cluster_profiles))
+
+# --- Step 7: Visualize clusters ---
+ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.9) +
   labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected3),
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected),
+    subtitle = paste("Optimal clusters (k) =", optimal_k),
     x = "Actual Width (cm)",
     y = "Actual Height (cm)",
     color = "Cluster"
@@ -3252,41 +3479,92 @@ ggplot(ceramics_subset3, aes(x = actual_width, y = actual_height, color = cluste
 
 Interpretaion:
 
-# Type 4 (k -> 2)
+# Type 4
 
 ```{r, echo=TRUE}
 
 library(dplyr)
-library(ggplot2)
 library(cluster)
+library(ggplot2)
 
 # --- Step 1: Filter for one vessel type ---
-# Change "1" to any other type number you want to analyze
-vessel_type_selected4 <- 4
+vessel_type_selected <- 4  # change this to analyze another vessel type
 
-ceramics_subset4 <- ceramics_data %>%
-  filter(type_category == vessel_type_selected4) %>%
+ceramics_subset <- ceramics_data %>%
+  filter(type_category == vessel_type_selected) %>%
   mutate(
+    base_category = ifelse(is.na(base_category), "Bro", base_category),  # Treat NA as "Bro" (round)
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
-    actual_height = na_if(actual_height, 0)
+    actual_height = na_if(actual_height, 0),
+    rim_category = as.factor(rim_category),
+    base_category = as.factor(base_category)
   ) %>%
   drop_na(actual_width, actual_diameter, actual_height)
 
-# --- Step 2: Scale numeric data for fair comparison ---
-scaled_data4 <- scale(ceramics_subset4[, c("actual_width", "actual_diameter", "actual_height")])
+# --- Step 2: Compute Gower distance for mixed data ---
+gower_dist <- daisy(
+  ceramics_subset[, c("actual_width", "actual_diameter", "actual_height", "rim_category", "base_category")],
+  metric = "gower"
+)
 
-# --- Step 3: Perform clustering (k = 4, since that was optimal before) ---
-set.seed(123)
-kmeans_result4 <- kmeans(scaled_data4, centers = 2, nstart = 25)
+# --- Step 3: Determine optimal number of clusters (2–10) ---
+sil_widths <- numeric(10)
+for (k in 2:10) {
+  pam_fit <- pam(gower_dist, diss = TRUE, k = k)
+  sil_widths[k] <- pam_fit$silinfo$avg.width
+}
+optimal_k <- which.max(sil_widths)
+cat("Optimal number of clusters:", optimal_k, "\n")
 
-ceramics_subset4$cluster <- as.factor(kmeans_result4$cluster)
+# --- Step 4: Perform clustering using optimal k ---
+final_pam <- pam(gower_dist, diss = TRUE, k = optimal_k)
+ceramics_subset$cluster <- as.factor(final_pam$clustering)
 
-# --- Step 4: Visualize the clusters ---
-ggplot(ceramics_subset4, aes(x = actual_width, y = actual_height, color = cluster)) +
-  geom_point(size = 3, alpha = 0.8) +
+# --- Step 5: Print detailed cluster summary table ---
+cluster_summary <- ceramics_subset %>%
+  select(vessel_number, site_name, rim_category, base_category, cluster) %>%
+  arrange(cluster, site_name)
+
+cat("\n=== Cluster Summary Table ===\n")
+print(cluster_summary, n = nrow(cluster_summary))
+
+# --- Step 6: Cluster dependency profiles (means, medians, min–max, etc.) ---
+cluster_profiles <- ceramics_subset %>%
+  group_by(cluster) %>%
+  summarise(
+    n = n(),
+    mean_width = mean(actual_width, na.rm = TRUE),
+    median_width = median(actual_width, na.rm = TRUE),
+    min_width = min(actual_width, na.rm = TRUE),
+    max_width = max(actual_width, na.rm = TRUE),
+    sd_width = sd(actual_width, na.rm = TRUE),
+
+    mean_diameter = mean(actual_diameter, na.rm = TRUE),
+    median_diameter = median(actual_diameter, na.rm = TRUE),
+    min_diameter = min(actual_diameter, na.rm = TRUE),
+    max_diameter = max(actual_diameter, na.rm = TRUE),
+    sd_diameter = sd(actual_diameter, na.rm = TRUE),
+
+    mean_height = mean(actual_height, na.rm = TRUE),
+    median_height = median(actual_height, na.rm = TRUE),
+    min_height = min(actual_height, na.rm = TRUE),
+    max_height = max(actual_height, na.rm = TRUE),
+    sd_height = sd(actual_height, na.rm = TRUE),
+
+    most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
+    most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
+  )
+
+cat("\n=== Cluster Dependency Summary ===\n")
+print(cluster_profiles, n = nrow(cluster_profiles))
+
+# --- Step 7: Visualize clusters ---
+ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.9) +
   labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected4),
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected),
+    subtitle = paste("Optimal clusters (k) =", optimal_k),
     x = "Actual Width (cm)",
     y = "Actual Height (cm)",
     color = "Cluster"
@@ -3297,86 +3575,187 @@ ggplot(ceramics_subset4, aes(x = actual_width, y = actual_height, color = cluste
 
 Interpretation:
 
-# Type 5 (k -> 2)
+# Type 5
 
 ```{r, echo=TRUE}
 
 library(dplyr)
-library(ggplot2)
 library(cluster)
+library(ggplot2)
 
 # --- Step 1: Filter for one vessel type ---
-# Change "1" to any other type number you want to analyze
-vessel_type_selected5 <- 5
+vessel_type_selected <- 5  # change this to analyze another vessel type
 
-ceramics_subset5 <- ceramics_data %>%
-  filter(type_category == vessel_type_selected5) %>%
+ceramics_subset <- ceramics_data %>%
+  filter(type_category == vessel_type_selected) %>%
   mutate(
+    base_category = ifelse(is.na(base_category), "Bro", base_category),  # Treat NA as "Bro" (round)
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
-    actual_height = na_if(actual_height, 0)
+    actual_height = na_if(actual_height, 0),
+    rim_category = as.factor(rim_category),
+    base_category = as.factor(base_category)
   ) %>%
   drop_na(actual_width, actual_diameter, actual_height)
 
-# --- Step 2: Scale numeric data for fair comparison ---
-scaled_data5 <- scale(ceramics_subset5[, c("actual_width", "actual_diameter", "actual_height")])
+# --- Step 2: Compute Gower distance for mixed data ---
+gower_dist <- daisy(
+  ceramics_subset[, c("actual_width", "actual_diameter", "actual_height", "rim_category", "base_category")],
+  metric = "gower"
+)
 
-# --- Step 3: Perform clustering (k = 4, since that was optimal before) ---
-set.seed(123)
-kmeans_result5 <- kmeans(scaled_data5, centers = 2, nstart = 25)
+# --- Step 3: Determine optimal number of clusters (2–10) ---
+sil_widths <- numeric(10)
+for (k in 2:10) {
+  pam_fit <- pam(gower_dist, diss = TRUE, k = k)
+  sil_widths[k] <- pam_fit$silinfo$avg.width
+}
+optimal_k <- which.max(sil_widths)
+cat("Optimal number of clusters:", optimal_k, "\n")
 
-ceramics_subset5$cluster <- as.factor(kmeans_result5$cluster)
+# --- Step 4: Perform clustering using optimal k ---
+final_pam <- pam(gower_dist, diss = TRUE, k = optimal_k)
+ceramics_subset$cluster <- as.factor(final_pam$clustering)
 
-# --- Step 4: Visualize the clusters ---
-ggplot(ceramics_subset5, aes(x = actual_width, y = actual_height, color = cluster)) +
-  geom_point(size = 3, alpha = 0.8) +
+# --- Step 5: Print detailed cluster summary table ---
+cluster_summary <- ceramics_subset %>%
+  select(vessel_number, site_name, rim_category, base_category, cluster) %>%
+  arrange(cluster, site_name)
+
+cat("\n=== Cluster Summary Table ===\n")
+print(cluster_summary, n = nrow(cluster_summary))
+
+# --- Step 6: Cluster dependency profiles (means, medians, min–max, etc.) ---
+cluster_profiles <- ceramics_subset %>%
+  group_by(cluster) %>%
+  summarise(
+    n = n(),
+    mean_width = mean(actual_width, na.rm = TRUE),
+    median_width = median(actual_width, na.rm = TRUE),
+    min_width = min(actual_width, na.rm = TRUE),
+    max_width = max(actual_width, na.rm = TRUE),
+    sd_width = sd(actual_width, na.rm = TRUE),
+
+    mean_diameter = mean(actual_diameter, na.rm = TRUE),
+    median_diameter = median(actual_diameter, na.rm = TRUE),
+    min_diameter = min(actual_diameter, na.rm = TRUE),
+    max_diameter = max(actual_diameter, na.rm = TRUE),
+    sd_diameter = sd(actual_diameter, na.rm = TRUE),
+
+    mean_height = mean(actual_height, na.rm = TRUE),
+    median_height = median(actual_height, na.rm = TRUE),
+    min_height = min(actual_height, na.rm = TRUE),
+    max_height = max(actual_height, na.rm = TRUE),
+    sd_height = sd(actual_height, na.rm = TRUE),
+
+    most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
+    most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
+  )
+
+cat("\n=== Cluster Dependency Summary ===\n")
+print(cluster_profiles, n = nrow(cluster_profiles))
+
+# --- Step 7: Visualize clusters ---
+ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.9) +
   labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected5),
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected),
+    subtitle = paste("Optimal clusters (k) =", optimal_k),
     x = "Actual Width (cm)",
     y = "Actual Height (cm)",
     color = "Cluster"
   ) +
   theme_minimal(base_size = 13)
-
 ```
 
 Interpretation:
 
-#Type 6 (k -> 8)
+#Type 6
 
 ```{r, echo=TRUE}
 
 library(dplyr)
-library(ggplot2)
 library(cluster)
+library(ggplot2)
 
 # --- Step 1: Filter for one vessel type ---
-# Change "1" to any other type number you want to analyze
-vessel_type_selected6 <- 6
+vessel_type_selected <- 6  # change this to analyze another vessel type
 
-ceramics_subset6 <- ceramics_data %>%
-  filter(type_category == vessel_type_selected6) %>%
+ceramics_subset <- ceramics_data %>%
+  filter(type_category == vessel_type_selected) %>%
   mutate(
+    base_category = ifelse(is.na(base_category), "Bro", base_category),  # Treat NA as "Bro" (round)
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
-    actual_height = na_if(actual_height, 0)
+    actual_height = na_if(actual_height, 0),
+    rim_category = as.factor(rim_category),
+    base_category = as.factor(base_category)
   ) %>%
   drop_na(actual_width, actual_diameter, actual_height)
 
-# --- Step 2: Scale numeric data for fair comparison ---
-scaled_data6 <- scale(ceramics_subset6[, c("actual_width", "actual_diameter", "actual_height")])
+# --- Step 2: Compute Gower distance for mixed data ---
+gower_dist <- daisy(
+  ceramics_subset[, c("actual_width", "actual_diameter", "actual_height", "rim_category", "base_category")],
+  metric = "gower"
+)
 
-# --- Step 3: Perform clustering (k = 4, since that was optimal before) ---
-set.seed(123)
-kmeans_result6 <- kmeans(scaled_data6, centers = 8, nstart = 25)
+# --- Step 3: Determine optimal number of clusters (2–10) ---
+sil_widths <- numeric(10)
+for (k in 2:10) {
+  pam_fit <- pam(gower_dist, diss = TRUE, k = k)
+  sil_widths[k] <- pam_fit$silinfo$avg.width
+}
+optimal_k <- which.max(sil_widths)
+cat("Optimal number of clusters:", optimal_k, "\n")
 
-ceramics_subset6$cluster <- as.factor(kmeans_result6$cluster)
+# --- Step 4: Perform clustering using optimal k ---
+final_pam <- pam(gower_dist, diss = TRUE, k = optimal_k)
+ceramics_subset$cluster <- as.factor(final_pam$clustering)
 
-# --- Step 4: Visualize the clusters ---
-ggplot(ceramics_subset6, aes(x = actual_width, y = actual_height, color = cluster)) +
-  geom_point(size = 3, alpha = 0.8) +
+# --- Step 5: Print detailed cluster summary table ---
+cluster_summary <- ceramics_subset %>%
+  select(vessel_number, site_name, rim_category, base_category, cluster) %>%
+  arrange(cluster, site_name)
+
+cat("\n=== Cluster Summary Table ===\n")
+print(cluster_summary, n = nrow(cluster_summary))
+
+# --- Step 6: Cluster dependency profiles (means, medians, min–max, etc.) ---
+cluster_profiles <- ceramics_subset %>%
+  group_by(cluster) %>%
+  summarise(
+    n = n(),
+    mean_width = mean(actual_width, na.rm = TRUE),
+    median_width = median(actual_width, na.rm = TRUE),
+    min_width = min(actual_width, na.rm = TRUE),
+    max_width = max(actual_width, na.rm = TRUE),
+    sd_width = sd(actual_width, na.rm = TRUE),
+
+    mean_diameter = mean(actual_diameter, na.rm = TRUE),
+    median_diameter = median(actual_diameter, na.rm = TRUE),
+    min_diameter = min(actual_diameter, na.rm = TRUE),
+    max_diameter = max(actual_diameter, na.rm = TRUE),
+    sd_diameter = sd(actual_diameter, na.rm = TRUE),
+
+    mean_height = mean(actual_height, na.rm = TRUE),
+    median_height = median(actual_height, na.rm = TRUE),
+    min_height = min(actual_height, na.rm = TRUE),
+    max_height = max(actual_height, na.rm = TRUE),
+    sd_height = sd(actual_height, na.rm = TRUE),
+
+    most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
+    most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
+  )
+
+cat("\n=== Cluster Dependency Summary ===\n")
+print(cluster_profiles, n = nrow(cluster_profiles))
+
+# --- Step 7: Visualize clusters ---
+ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.9) +
   labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected6),
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected),
+    subtitle = paste("Optimal clusters (k) =", optimal_k),
     x = "Actual Width (cm)",
     y = "Actual Height (cm)",
     color = "Cluster"
@@ -3387,41 +3766,92 @@ ggplot(ceramics_subset6, aes(x = actual_width, y = actual_height, color = cluste
 
 Interpretation: I do not know if 8 clusters are the correct number..
 
-# Type 7 (k -> 2)
+# Type 7
 
 ```{r, echo=TRUE}
 
 library(dplyr)
-library(ggplot2)
 library(cluster)
+library(ggplot2)
 
 # --- Step 1: Filter for one vessel type ---
-# Change "1" to any other type number you want to analyze
-vessel_type_selected7 <- 7
+vessel_type_selected <- 7  # change this to analyze another vessel type
 
-ceramics_subset7 <- ceramics_data %>%
-  filter(type_category == vessel_type_selected7) %>%
+ceramics_subset <- ceramics_data %>%
+  filter(type_category == vessel_type_selected) %>%
   mutate(
+    base_category = ifelse(is.na(base_category), "Bro", base_category),  # Treat NA as "Bro" (round)
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
-    actual_height = na_if(actual_height, 0)
+    actual_height = na_if(actual_height, 0),
+    rim_category = as.factor(rim_category),
+    base_category = as.factor(base_category)
   ) %>%
   drop_na(actual_width, actual_diameter, actual_height)
 
-# --- Step 2: Scale numeric data for fair comparison ---
-scaled_data7 <- scale(ceramics_subset7[, c("actual_width", "actual_diameter", "actual_height")])
+# --- Step 2: Compute Gower distance for mixed data ---
+gower_dist <- daisy(
+  ceramics_subset[, c("actual_width", "actual_diameter", "actual_height", "rim_category", "base_category")],
+  metric = "gower"
+)
 
-# --- Step 3: Perform clustering (k = 4, since that was optimal before) ---
-set.seed(123)
-kmeans_result7 <- kmeans(scaled_data7, centers = 2, nstart = 25)
+# --- Step 3: Determine optimal number of clusters (2–10) ---
+sil_widths <- numeric(10)
+for (k in 2:10) {
+  pam_fit <- pam(gower_dist, diss = TRUE, k = k)
+  sil_widths[k] <- pam_fit$silinfo$avg.width
+}
+optimal_k <- which.max(sil_widths)
+cat("Optimal number of clusters:", optimal_k, "\n")
 
-ceramics_subset7$cluster <- as.factor(kmeans_result7$cluster)
+# --- Step 4: Perform clustering using optimal k ---
+final_pam <- pam(gower_dist, diss = TRUE, k = optimal_k)
+ceramics_subset$cluster <- as.factor(final_pam$clustering)
 
-# --- Step 4: Visualize the clusters ---
-ggplot(ceramics_subset7, aes(x = actual_width, y = actual_height, color = cluster)) +
-  geom_point(size = 3, alpha = 0.8) +
+# --- Step 5: Print detailed cluster summary table ---
+cluster_summary <- ceramics_subset %>%
+  select(vessel_number, site_name, rim_category, base_category, cluster) %>%
+  arrange(cluster, site_name)
+
+cat("\n=== Cluster Summary Table ===\n")
+print(cluster_summary, n = nrow(cluster_summary))
+
+# --- Step 6: Cluster dependency profiles (means, medians, min–max, etc.) ---
+cluster_profiles <- ceramics_subset %>%
+  group_by(cluster) %>%
+  summarise(
+    n = n(),
+    mean_width = mean(actual_width, na.rm = TRUE),
+    median_width = median(actual_width, na.rm = TRUE),
+    min_width = min(actual_width, na.rm = TRUE),
+    max_width = max(actual_width, na.rm = TRUE),
+    sd_width = sd(actual_width, na.rm = TRUE),
+
+    mean_diameter = mean(actual_diameter, na.rm = TRUE),
+    median_diameter = median(actual_diameter, na.rm = TRUE),
+    min_diameter = min(actual_diameter, na.rm = TRUE),
+    max_diameter = max(actual_diameter, na.rm = TRUE),
+    sd_diameter = sd(actual_diameter, na.rm = TRUE),
+
+    mean_height = mean(actual_height, na.rm = TRUE),
+    median_height = median(actual_height, na.rm = TRUE),
+    min_height = min(actual_height, na.rm = TRUE),
+    max_height = max(actual_height, na.rm = TRUE),
+    sd_height = sd(actual_height, na.rm = TRUE),
+
+    most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
+    most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
+  )
+
+cat("\n=== Cluster Dependency Summary ===\n")
+print(cluster_profiles, n = nrow(cluster_profiles))
+
+# --- Step 7: Visualize clusters ---
+ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.9) +
   labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected7),
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected),
+    subtitle = paste("Optimal clusters (k) =", optimal_k),
     x = "Actual Width (cm)",
     y = "Actual Height (cm)",
     color = "Cluster"
@@ -3432,86 +3862,187 @@ ggplot(ceramics_subset7, aes(x = actual_width, y = actual_height, color = cluste
 
 Interpretation:
 
-# Type 8 (k -> 2)
+# Type 8
 
 ```{r, echo=TRUE}
 
 library(dplyr)
-library(ggplot2)
 library(cluster)
+library(ggplot2)
 
 # --- Step 1: Filter for one vessel type ---
-# Change "1" to any other type number you want to analyze
-vessel_type_selected8 <- 8
+vessel_type_selected <- 8  # change this to analyze another vessel type
 
-ceramics_subset8 <- ceramics_data %>%
-  filter(type_category == vessel_type_selected8) %>%
+ceramics_subset <- ceramics_data %>%
+  filter(type_category == vessel_type_selected) %>%
   mutate(
+    base_category = ifelse(is.na(base_category), "Bro", base_category),  # Treat NA as "Bro" (round)
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
-    actual_height = na_if(actual_height, 0)
+    actual_height = na_if(actual_height, 0),
+    rim_category = as.factor(rim_category),
+    base_category = as.factor(base_category)
   ) %>%
   drop_na(actual_width, actual_diameter, actual_height)
 
-# --- Step 2: Scale numeric data for fair comparison ---
-scaled_data8 <- scale(ceramics_subset8[, c("actual_width", "actual_diameter", "actual_height")])
+# --- Step 2: Compute Gower distance for mixed data ---
+gower_dist <- daisy(
+  ceramics_subset[, c("actual_width", "actual_diameter", "actual_height", "rim_category", "base_category")],
+  metric = "gower"
+)
 
-# --- Step 3: Perform clustering (k = 4, since that was optimal before) ---
-set.seed(123)
-kmeans_result8 <- kmeans(scaled_data8, centers = 2, nstart = 25)
+# --- Step 3: Determine optimal number of clusters (2–10) ---
+sil_widths <- numeric(10)
+for (k in 2:10) {
+  pam_fit <- pam(gower_dist, diss = TRUE, k = k)
+  sil_widths[k] <- pam_fit$silinfo$avg.width
+}
+optimal_k <- which.max(sil_widths)
+cat("Optimal number of clusters:", optimal_k, "\n")
 
-ceramics_subset8$cluster <- as.factor(kmeans_result8$cluster)
+# --- Step 4: Perform clustering using optimal k ---
+final_pam <- pam(gower_dist, diss = TRUE, k = optimal_k)
+ceramics_subset$cluster <- as.factor(final_pam$clustering)
 
-# --- Step 4: Visualize the clusters ---
-ggplot(ceramics_subset8, aes(x = actual_width, y = actual_height, color = cluster)) +
-  geom_point(size = 3, alpha = 0.8) +
+# --- Step 5: Print detailed cluster summary table ---
+cluster_summary <- ceramics_subset %>%
+  select(vessel_number, site_name, rim_category, base_category, cluster) %>%
+  arrange(cluster, site_name)
+
+cat("\n=== Cluster Summary Table ===\n")
+print(cluster_summary, n = nrow(cluster_summary))
+
+# --- Step 6: Cluster dependency profiles (means, medians, min–max, etc.) ---
+cluster_profiles <- ceramics_subset %>%
+  group_by(cluster) %>%
+  summarise(
+    n = n(),
+    mean_width = mean(actual_width, na.rm = TRUE),
+    median_width = median(actual_width, na.rm = TRUE),
+    min_width = min(actual_width, na.rm = TRUE),
+    max_width = max(actual_width, na.rm = TRUE),
+    sd_width = sd(actual_width, na.rm = TRUE),
+
+    mean_diameter = mean(actual_diameter, na.rm = TRUE),
+    median_diameter = median(actual_diameter, na.rm = TRUE),
+    min_diameter = min(actual_diameter, na.rm = TRUE),
+    max_diameter = max(actual_diameter, na.rm = TRUE),
+    sd_diameter = sd(actual_diameter, na.rm = TRUE),
+
+    mean_height = mean(actual_height, na.rm = TRUE),
+    median_height = median(actual_height, na.rm = TRUE),
+    min_height = min(actual_height, na.rm = TRUE),
+    max_height = max(actual_height, na.rm = TRUE),
+    sd_height = sd(actual_height, na.rm = TRUE),
+
+    most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
+    most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
+  )
+
+cat("\n=== Cluster Dependency Summary ===\n")
+print(cluster_profiles, n = nrow(cluster_profiles))
+
+# --- Step 7: Visualize clusters ---
+ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.9) +
   labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected8),
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected),
+    subtitle = paste("Optimal clusters (k) =", optimal_k),
     x = "Actual Width (cm)",
     y = "Actual Height (cm)",
     color = "Cluster"
   ) +
   theme_minimal(base_size = 13)
-
 ```
 
 Interpretation:
 
-# Type 9 (k -> 2)
+# Type 9
 
 ```{r, echo=TRUE}
 
 library(dplyr)
-library(ggplot2)
 library(cluster)
+library(ggplot2)
 
 # --- Step 1: Filter for one vessel type ---
-# Change "1" to any other type number you want to analyze
-vessel_type_selected9 <- 9
+vessel_type_selected <- 9  # change this to analyze another vessel type
 
-ceramics_subset9 <- ceramics_data %>%
-  filter(type_category == vessel_type_selected9) %>%
+ceramics_subset <- ceramics_data %>%
+  filter(type_category == vessel_type_selected) %>%
   mutate(
+    base_category = ifelse(is.na(base_category), "Bro", base_category),  # Treat NA as "Bro" (round)
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
-    actual_height = na_if(actual_height, 0)
+    actual_height = na_if(actual_height, 0),
+    rim_category = as.factor(rim_category),
+    base_category = as.factor(base_category)
   ) %>%
   drop_na(actual_width, actual_diameter, actual_height)
 
-# --- Step 2: Scale numeric data for fair comparison ---
-scaled_data9 <- scale(ceramics_subset9[, c("actual_width", "actual_diameter", "actual_height")])
+# --- Step 2: Compute Gower distance for mixed data ---
+gower_dist <- daisy(
+  ceramics_subset[, c("actual_width", "actual_diameter", "actual_height", "rim_category", "base_category")],
+  metric = "gower"
+)
 
-# --- Step 3: Perform clustering (k = 4, since that was optimal before) ---
-set.seed(123)
-kmeans_result9 <- kmeans(scaled_data9, centers = 2, nstart = 25)
+# --- Step 3: Determine optimal number of clusters (2–10) ---
+sil_widths <- numeric(10)
+for (k in 2:10) {
+  pam_fit <- pam(gower_dist, diss = TRUE, k = k)
+  sil_widths[k] <- pam_fit$silinfo$avg.width
+}
+optimal_k <- which.max(sil_widths)
+cat("Optimal number of clusters:", optimal_k, "\n")
 
-ceramics_subset9$cluster <- as.factor(kmeans_result9$cluster)
+# --- Step 4: Perform clustering using optimal k ---
+final_pam <- pam(gower_dist, diss = TRUE, k = optimal_k)
+ceramics_subset$cluster <- as.factor(final_pam$clustering)
 
-# --- Step 4: Visualize the clusters ---
-ggplot(ceramics_subset9, aes(x = actual_width, y = actual_height, color = cluster)) +
-  geom_point(size = 3, alpha = 0.8) +
+# --- Step 5: Print detailed cluster summary table ---
+cluster_summary <- ceramics_subset %>%
+  select(vessel_number, site_name, rim_category, base_category, cluster) %>%
+  arrange(cluster, site_name)
+
+cat("\n=== Cluster Summary Table ===\n")
+print(cluster_summary, n = nrow(cluster_summary))
+
+# --- Step 6: Cluster dependency profiles (means, medians, min–max, etc.) ---
+cluster_profiles <- ceramics_subset %>%
+  group_by(cluster) %>%
+  summarise(
+    n = n(),
+    mean_width = mean(actual_width, na.rm = TRUE),
+    median_width = median(actual_width, na.rm = TRUE),
+    min_width = min(actual_width, na.rm = TRUE),
+    max_width = max(actual_width, na.rm = TRUE),
+    sd_width = sd(actual_width, na.rm = TRUE),
+
+    mean_diameter = mean(actual_diameter, na.rm = TRUE),
+    median_diameter = median(actual_diameter, na.rm = TRUE),
+    min_diameter = min(actual_diameter, na.rm = TRUE),
+    max_diameter = max(actual_diameter, na.rm = TRUE),
+    sd_diameter = sd(actual_diameter, na.rm = TRUE),
+
+    mean_height = mean(actual_height, na.rm = TRUE),
+    median_height = median(actual_height, na.rm = TRUE),
+    min_height = min(actual_height, na.rm = TRUE),
+    max_height = max(actual_height, na.rm = TRUE),
+    sd_height = sd(actual_height, na.rm = TRUE),
+
+    most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
+    most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
+  )
+
+cat("\n=== Cluster Dependency Summary ===\n")
+print(cluster_profiles, n = nrow(cluster_profiles))
+
+# --- Step 7: Visualize clusters ---
+ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.9) +
   labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected9),
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected),
+    subtitle = paste("Optimal clusters (k) =", optimal_k),
     x = "Actual Width (cm)",
     y = "Actual Height (cm)",
     color = "Cluster"
@@ -3527,36 +4058,87 @@ Interpretation:
 ```{r, echo=TRUE}
 
 library(dplyr)
-library(ggplot2)
 library(cluster)
+library(ggplot2)
 
 # --- Step 1: Filter for one vessel type ---
-# Change "1" to any other type number you want to analyze
-vessel_type_selected10 <- 10
+vessel_type_selected <- 10  # change this to analyze another vessel type
 
-ceramics_subset10 <- ceramics_data %>%
-  filter(type_category == vessel_type_selected10) %>%
+ceramics_subset <- ceramics_data %>%
+  filter(type_category == vessel_type_selected) %>%
   mutate(
+    base_category = ifelse(is.na(base_category), "Bro", base_category),  # Treat NA as "Bro" (round)
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
-    actual_height = na_if(actual_height, 0)
+    actual_height = na_if(actual_height, 0),
+    rim_category = as.factor(rim_category),
+    base_category = as.factor(base_category)
   ) %>%
   drop_na(actual_width, actual_diameter, actual_height)
 
-# --- Step 2: Scale numeric data for fair comparison ---
-scaled_data10 <- scale(ceramics_subset10[, c("actual_width", "actual_diameter", "actual_height")])
+# --- Step 2: Compute Gower distance for mixed data ---
+gower_dist <- daisy(
+  ceramics_subset[, c("actual_width", "actual_diameter", "actual_height", "rim_category", "base_category")],
+  metric = "gower"
+)
 
-# --- Step 3: Perform clustering (k = 4, since that was optimal before) ---
-set.seed(123)
-kmeans_result10 <- kmeans(scaled_data10, centers = 2, nstart = 25)
+# --- Step 3: Determine optimal number of clusters (2–10) ---
+sil_widths <- numeric(10)
+for (k in 2:10) {
+  pam_fit <- pam(gower_dist, diss = TRUE, k = k)
+  sil_widths[k] <- pam_fit$silinfo$avg.width
+}
+optimal_k <- which.max(sil_widths)
+cat("Optimal number of clusters:", optimal_k, "\n")
 
-ceramics_subset10$cluster <- as.factor(kmeans_result10$cluster)
+# --- Step 4: Perform clustering using optimal k ---
+final_pam <- pam(gower_dist, diss = TRUE, k = optimal_k)
+ceramics_subset$cluster <- as.factor(final_pam$clustering)
 
-# --- Step 4: Visualize the clusters ---
-ggplot(ceramics_subset10, aes(x = actual_width, y = actual_height, color = cluster)) +
-  geom_point(size = 3, alpha = 0.8) +
+# --- Step 5: Print detailed cluster summary table ---
+cluster_summary <- ceramics_subset %>%
+  select(vessel_number, site_name, rim_category, base_category, cluster) %>%
+  arrange(cluster, site_name)
+
+cat("\n=== Cluster Summary Table ===\n")
+print(cluster_summary, n = nrow(cluster_summary))
+
+# --- Step 6: Cluster dependency profiles (means, medians, min–max, etc.) ---
+cluster_profiles <- ceramics_subset %>%
+  group_by(cluster) %>%
+  summarise(
+    n = n(),
+    mean_width = mean(actual_width, na.rm = TRUE),
+    median_width = median(actual_width, na.rm = TRUE),
+    min_width = min(actual_width, na.rm = TRUE),
+    max_width = max(actual_width, na.rm = TRUE),
+    sd_width = sd(actual_width, na.rm = TRUE),
+
+    mean_diameter = mean(actual_diameter, na.rm = TRUE),
+    median_diameter = median(actual_diameter, na.rm = TRUE),
+    min_diameter = min(actual_diameter, na.rm = TRUE),
+    max_diameter = max(actual_diameter, na.rm = TRUE),
+    sd_diameter = sd(actual_diameter, na.rm = TRUE),
+
+    mean_height = mean(actual_height, na.rm = TRUE),
+    median_height = median(actual_height, na.rm = TRUE),
+    min_height = min(actual_height, na.rm = TRUE),
+    max_height = max(actual_height, na.rm = TRUE),
+    sd_height = sd(actual_height, na.rm = TRUE),
+
+    most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
+    most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
+  )
+
+cat("\n=== Cluster Dependency Summary ===\n")
+print(cluster_profiles, n = nrow(cluster_profiles))
+
+# --- Step 7: Visualize clusters ---
+ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster)) +
+  geom_point(size = 3, alpha = 0.9) +
   labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected10),
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected),
+    subtitle = paste("Optimal clusters (k) =", optimal_k),
     x = "Actual Width (cm)",
     y = "Actual Height (cm)",
     color = "Cluster"
@@ -3565,7 +4147,7 @@ ggplot(ceramics_subset10, aes(x = actual_width, y = actual_height, color = clust
 
 ```
 
-Interpretation:
+Interpretation: The Jenne-jeno vessels are in their own cluster -> used for graves!
 
 ___________________________________________
 # Cluster analysis of the interesting types
