@@ -3025,6 +3025,65 @@ print(optimal_clusters)
 
 ```
 
+``` {r, echo=TRUE}
+library(dplyr)
+library(cluster)
+library(ggplot2)
+library(purrr)
+
+# --- Step 1: Clean the data ---
+ceramics_clean <- ceramics_data %>%
+  filter(!is.na(actual_width), !is.na(actual_height), !is.na(actual_diameter)) %>%
+  filter(actual_width != 0, actual_height != 0, actual_diameter != 0)
+
+# --- Step 2: Function to find optimal number of clusters using silhouette width ---
+find_optimal_clusters <- function(df) {
+  numeric_data <- df %>% select(actual_width, actual_height, actual_diameter)
+  n <- nrow(numeric_data)
+  if (n < 3) return(NA)  # Not enough points for clustering
+  
+  max_k <- min(10, n - 1)
+  sil_values <- numeric(max_k)
+  
+  for (k in 2:max_k) {
+    pam_fit <- pam(numeric_data, k)
+    sil_values[k] <- pam_fit$silinfo$avg.width
+  }
+  
+  best_k <- which.max(sil_values)
+  return(best_k)
+}
+
+# --- Step 3: Compute optimal clusters per vessel type ---
+optimal_clusters <- ceramics_clean %>%
+  group_by(type_category) %>%
+  summarise(
+    n_datapoints = n(),
+    optimal_k = find_optimal_clusters(cur_data())
+  ) %>%
+  ungroup()
+
+# --- Step 4: Plot results ---
+ggplot(optimal_clusters, aes(x = factor(type_category), y = optimal_k)) +
+  geom_col(fill = "steelblue") +
+  geom_text(aes(label = paste0("k=", optimal_k, "\n(n=", n_datapoints, ")")),
+            vjust = -0.6, size = 3) +
+  labs(
+    title = "Optimal Number of Clusters using only size variables",
+    x = "Vessel Type",
+    y = "Optimal Cluster Count"
+  ) +
+  expand_limits(y = max(optimal_clusters$optimal_k, na.rm = TRUE) + 2) +  # add top space
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+# --- Step 5: Print summary table ---
+print(optimal_clusters)
+```
+
 # More detailed clustering including the three measured parameters + rim and base
 
 I used PAM (Partitioning Around Medoids) clustering — also known as k-medoids — in combination with the Gower distance metric.
