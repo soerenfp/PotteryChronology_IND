@@ -218,11 +218,11 @@ bar_plot_vessel <- ggplot(vessel_counts, aes(x = as.factor(type_category), y = c
 # Legend table for vessel type descriptions
 legend_table_vessel <- data.frame(
   type_category = 1:15,
-  Description = c("Wide-open vessels", "Open vessels", "Closed horizontal-oval vessels", 
-                  "Vertical vessels", "Closed vessels", "Tightly-closed vessels", 
-                  "Open carinated vessels", "Wide-open carinated vessels", 
-                  "Vertical-vertical oval vessels", "Closed-vertical oval vessels", 
-                  "Tightly-closed vertical oval vessels", "Lids", 
+  Description = c("Wide-open sphere", "Open sphere", "Closed hor. ellipsoid", 
+                  "Vertical sphere", "Closed sphere", "Tightly-closed sphere", 
+                  "Open carinated", "Wide-open carinated", 
+                  "Vertical ver. ellipsoid", "Closed ver. ellipsoid", 
+                  "Tightly-closed ver. ellipsoid", "Lids", 
                   "Flasks", "Tellem tripods", "Tellem tripods (top)")
 )
 
@@ -4112,7 +4112,7 @@ ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster
 
 Interpretation:
 
-# Type 10 (k -> 2)
+# Type 10
 
 ```{r, echo=TRUE}
 
