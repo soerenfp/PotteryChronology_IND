@@ -2510,7 +2510,7 @@ NICK: I just do these analysis for confirming my 10cm size groups based on width
 
 OBS: Try to do density curves per pot type!
 
-#actual_width
+#actual_width (binwidth 2)
 
 ```{r, echo=TRUE}
 ggplot(
@@ -2522,7 +2522,7 @@ ggplot(
   geom_density(color = "red", size = 1.2) +
   scale_x_continuous(breaks = seq(0, 60, by = 10)) +
   labs(
-    title = "Distribution and Density of Actual Width",
+    title = "Distribution and Density of Total Width (2 cm)",
     x = "Actual Width (cm)",
     y = "Density"
   ) +
@@ -2537,6 +2537,26 @@ Interpretation:
 - Most vessels are between 10-15 cm in width
 - There is a high variability in the material, with some smaller and many more wide vessels
 - there is a long tail towards higher widths, suggesting that there are many very wide vessels
+
+#actual_width (binwidth 10)
+
+```{r, echo=TRUE}
+ggplot(
+  ceramics_data %>% filter(!is.na(actual_width) & actual_width != 0),
+  aes(x = actual_width)
+) +
+  geom_histogram(aes(y = after_stat(density)), binwidth = 10,
+                 fill = "lightblue", color = "black") +
+  geom_density(color = "red", size = 1.2) +
+  scale_x_continuous(breaks = seq(0, 60, by = 10)) +
+  labs(
+    title = "Distribution and Density of Total Width (10 cm)",
+    x = "Actual Width (cm)",
+    y = "Density"
+  ) +
+  theme_minimal(base_size = 13)
+
+```
 
 #actual_height
 
