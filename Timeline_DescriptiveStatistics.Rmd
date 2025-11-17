@@ -2668,13 +2668,15 @@ ceramics_data_clean <- ceramics_data %>%
   mutate(
     actual_width = na_if(actual_width, 0),
     actual_height = na_if(actual_height, 0),
-    actual_diameter = na_if(actual_diameter, 0)
+    actual_diameter = na_if(actual_diameter, 0),
+    litres = na_if(litres, 0)
   ) %>%
   filter(
     !is.na(type_category),
     !is.na(actual_width),
     !is.na(actual_height),
-    !is.na(actual_diameter)
+    !is.na(actual_diameter),
+    !is.na(litres)
   )
 ```
 
@@ -2725,6 +2727,225 @@ ggplot(ceramics_data_clean, aes(x = actual_diameter, fill = factor(type_category
   theme(legend.position = "none")
 
 ```
+
+Interpretation:
+
+```{r, echo=TRUE}
+# --- Clean data ---
+ceramics_data_clean <- ceramics_data %>%
+  mutate(litres = na_if(litres, 0)) %>%
+  drop_na(litres)
+
+# --- Get unique vessel types ---
+type_list <- sort(unique(ceramics_data_clean$type_category))
+
+# --- Loop: one plot per vessel type ---
+for (t in type_list) {
+  
+  df_t <- ceramics_data_clean %>% filter(type_category == t)
+  
+  xmax <- max(df_t$litres, na.rm = TRUE)
+  
+  p <- ggplot(df_t, aes(x = litres)) +
+    geom_density(fill = "steelblue", alpha = 0.7, color = "black") +
+    scale_x_continuous(
+      limits = c(0, xmax),
+      expand = c(0, 0)   # no extra padding
+    ) +
+    labs(
+      title = paste("Density Plot of Volume — Vessel Type", t),
+      x = "Litres",
+      y = "Density"
+    ) +
+    theme_minimal(base_size = 14)
+  
+  print(p)
+}
+
+
+```
+
+# Volume per vessel type
+
+```{r, echo=TRUE}
+# --- volume ---
+
+# --- Clean data: remove NA or zero volume ---
+ceramics_vol <- ceramics_data %>%
+  mutate(litres = na_if(litres, 0)) %>%
+  drop_na(litres)
+
+# --- Summarise volume per type (max volume per vessel type) ---
+volume_summary <- ceramics_vol %>%
+  group_by(type_category) %>%
+  summarise(
+    max_litres = max(litres, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# --- Horizontal bar plot (ggplot chooses best x-axis automatically) ---
+ggplot(volume_summary, aes(y = factor(type_category), x = max_litres)) +
+  geom_col(fill = "steelblue") +
+  scale_x_continuous() +   # automatic axis
+  labs(
+    title = "Maximum Vessel Volume (Litres) per Type",
+    x = "Volume (Litres)",
+    y = "Vessel Type"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.text.y = element_text(size = 15)
+  )
+
+
+```
+
+
+
+```{r, echo=TRUE}
+library(dplyr)
+library(knitr)
+
+# --- Clean data: remove NA or zero volume ---
+ceramics_vol <- ceramics_data %>%
+  mutate(litres = na_if(litres, 0)) %>%
+  drop_na(litres)
+
+# --- Descriptive statistics for litres per vessel type ---
+descriptive_stats <- ceramics_vol %>%
+  group_by(type_category) %>%
+  summarise(
+    count = n(),
+    mean_litres = mean(litres),
+    median_litres = median(litres),
+    min_litres = min(litres),
+    max_litres = max(litres),
+    sd_litres = sd(litres),
+    .groups = "drop"
+  ) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2)))
+```
+
+```{r, echo=TRUE}
+# --- Nice formatted table ---
+kable(
+  descriptive_stats,
+  caption = "Descriptive Statistics for Vessel Volume (Litres) by Vessel Type",
+  align = "c"
+)
+
+```
+
+# Range of volume per type
+
+```{r, echo=TRUE}
+library(dplyr)
+library(ggplot2)
+
+# --- Clean data: remove NA or zero volume ---
+ceramics_vol <- ceramics_data %>%
+  mutate(litres = na_if(litres, 0)) %>%
+  drop_na(litres)
+
+# --- Ensure vessel types are ordered 1 → 11 ---
+ceramics_vol$type_category <- factor(
+  ceramics_vol$type_category,
+  levels = sort(unique(ceramics_vol$type_category))
+)
+
+# --- Create one plot per vessel type ---
+plot_list <- lapply(levels(ceramics_vol$type_category), function(vt) {
+  
+  df_sub <- ceramics_vol %>% filter(type_category == vt)
+  
+  ggplot(df_sub, aes(x = litres, y = type_category)) +
+    geom_boxplot(
+      fill = "steelblue",
+      color = "black",
+      outlier.color = "red",
+      outlier.size = 2
+    ) +
+    labs(
+      title = paste("Distribution of Vessel Volume (Litres) – Type", vt),
+      x = "Litres",
+      y = "Vessel Type"
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      plot.title = element_text(face = "bold"),
+      axis.text.y = element_text(size = 12)
+    )
+})
+
+# Name each plot in the list
+names(plot_list) <- paste0("Type_", levels(ceramics_vol$type_category))
+```
+
+```{r, echo=TRUE}
+# Print
+plot_list$Type_1
+```
+
+```{r, echo=TRUE}
+# Print
+plot_list$Type_2
+```
+
+```{r, echo=TRUE}
+# Print
+plot_list$Type_3
+```
+
+```{r, echo=TRUE}
+# Print
+plot_list$Type_4
+```
+
+```{r, echo=TRUE}
+# Print
+plot_list$Type_5
+```
+
+```{r, echo=TRUE}
+# Print
+plot_list$Type_6
+```
+
+```{r, echo=TRUE}
+# Print
+plot_list$Type_7
+```
+
+```{r, echo=TRUE}
+# Print
+plot_list$Type_8
+```
+
+```{r, echo=TRUE}
+# Print
+plot_list$Type_9
+```
+
+```{r, echo=TRUE}
+# Print
+plot_list$Type_10
+```
+
+```{r, echo=TRUE}
+# Print
+plot_list$Type_2
+```
+
+Each vessel type displays:
+
+Box = IQR (25% → 75%)
+
+Middle line = Median
+
+Whiskers = Min → Max (within 1.5×IQR)
+
+Red dots = outliers (if any)
 
 # Combined Density Plot (Width, Height, Diameter) per Vessel Type
 
@@ -4228,574 +4449,185 @@ ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster
 
 Interpretation: The Jenne-jeno vessels are in their own cluster -> used for graves!
 
-___________________________________________
-# Cluster analysis of the interesting types
-___________________________________________
-
-- Type 2 (because of the many suggested clusters)
-- Type 3
-- Type 6
-(- Type 7)
-- Type 9
-- Type 10
-(- Type 11)
-
-# Type 2 (k -> 4)
+#PAM clustering of litres, rim_collapsed, base_category, attributes
 
 ```{r, echo=TRUE}
 
+# --- Load Libraries ---
 library(dplyr)
+library(cluster)
 library(ggplot2)
-library(ggrepel)
+library(purrr)
+library(tidyr)
 
-# --- Step 1: Filter for one vessel type ---
-vessel_type_selected2 <- 2
-
-ceramics_subset2 <- ceramics_data %>%
-  filter(type_category == vessel_type_selected2) %>%
+# --- Prepare data ---
+ceramics_filtered <- ceramics_data %>%
   mutate(
-    actual_width = na_if(actual_width, 0),
-    actual_diameter = na_if(actual_diameter, 0),
-    actual_height = na_if(actual_height, 0)
+    across(c(actual_width, actual_diameter, actual_height, litres), ~na_if(.x, 0)),
+    rim_collapsed = as.factor(rim_collapsed),
+    base_category = if_else(is.na(base_category) | base_category == "", "Bro", base_category), #makes NAs into Bro bases
+    base_category = as.factor(base_category),
+    attributes = as.factor(attributes)  # make sure attributes is treated as categorical
   ) %>%
-  drop_na(actual_width, actual_diameter, actual_height)
+  filter(!is.na(actual_width) & !is.na(actual_diameter) & !is.na(actual_height) & !is.na(litres))
 
-# --- Step 2: Scale numeric data for fair comparison ---
-scaled_data2 <- scale(ceramics_subset2[, c("actual_width", "actual_diameter", "actual_height")])
+# --- Function to find optimal clusters (mixed numeric + categorical) ---
+find_optimal_clusters_mixed <- function(df) {
+  mixed_data <- df %>% select(litres, rim_collapsed, base_category, attributes)
+  gower_dist <- daisy(mixed_data, metric = "gower")
+  max_k <- min(10, nrow(df) - 1)
+  if (nrow(df) < 3) return(NA)
+  
+  sil_values <- map_dbl(2:max_k, function(k) {
+    pam_fit <- pam(gower_dist, k)
+    pam_fit$silinfo$avg.width
+  })
+  optimal_k <- which.max(sil_values) + 1
+  return(optimal_k)
+}
 
-# --- Step 3: Perform clustering ---
-set.seed(123)
-kmeans_result2 <- kmeans(scaled_data2, centers = 4, nstart = 25)
+# --- Calculate optimal clusters per vessel type ---
+optimal_clusters <- ceramics_filtered %>%
+  group_by(type_category) %>%
+  summarise(
+    n_datapoints = n(),
+    optimal_k = find_optimal_clusters_mixed(cur_data())
+  ) %>%
+  ungroup()
 
-ceramics_subset2$cluster <- as.factor(kmeans_result2$cluster)
+# --- Assign clusters ---
+clustered_data <- ceramics_filtered %>%
+  group_by(type_category) %>%
+  group_modify(~{
+    mixed_data <- .x %>% select(actual_width, actual_diameter, actual_height, litres, rim_collapsed, base_category, attributes)
+    gower_dist <- daisy(mixed_data, metric = "gower")
+    
+    optimal_k <- find_optimal_clusters_mixed(.x)
+    if (is.na(optimal_k) || optimal_k < 2) {
+      .x$cluster <- 1
+    } else {
+      pam_fit <- pam(gower_dist, optimal_k)
+      .x$cluster <- pam_fit$clustering
+    }
+    .x
+  }) %>%
+  ungroup()
 
-# --- Step 4: Plot (Width × Height) with Cluster Colors and Orifice Diameter as Size ---
-ggplot(ceramics_subset2, aes(
-  x = actual_width,
-  y = actual_height,
-  color = cluster,
-  size = actual_diameter
-)) +
-  geom_point(alpha = 0.85, shape = 21, fill = NA, stroke = 1.2) +
-  geom_text_repel(
-    aes(label = vessel_number),
-    size = 2.5,
-    color = "black",
-    max.overlaps = Inf,
-    segment.color = "grey70",
-    segment.size = 0.3,
-    box.padding = 0.2,
-    point.padding = 0.2
-  ) +
-  scale_color_brewer(
-    name = "Cluster",
-    palette = "Set2"
-  ) +
-  scale_size_continuous(
-    name = "Orifice diameter (cm)",
-    range = c(2, 6)
-  ) +
+# --- Plot: Optimal clusters per type ---
+ggplot(optimal_clusters, aes(x = factor(type_category), y = optimal_k)) +
+  geom_col(fill = "steelblue") +
+  geom_text(aes(label = paste0("k=", optimal_k, "\n(n=", n_datapoints, ")")),
+            vjust = -0.6, fontface = "plain", size = 3) +
   labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected2),
-    x = "Actual Width (cm)",
-    y = "Actual Height (cm)"
+    title = "Optimal Number of Clusters per Vessel Type",
+    x = "Vessel Type",
+    y = "Optimal Cluster Count"
   ) +
-  theme_minimal(base_size = 13) +
+  expand_limits(y = max(optimal_clusters$optimal_k, na.rm = TRUE) + 2) +
+  theme_minimal(base_size = 14) +
   theme(
-    legend.position = "right",
-    plot.title = element_text(face = "bold", size = 14)
+    plot.title = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-# --- Step 5: List sites, vessel numbers, and clusters ---
-site_vessel_cluster_list2 <- ceramics_subset2 %>%
-  group_by(site_name) %>%
-  summarise(
-    vessels_and_clusters = paste0(
-      vessel_number, " (Cluster ", cluster, ")", collapse = ", "
-    )
-  ) %>%
-  arrange(site_name)
-
-# View the result in R console
-print(site_vessel_cluster_list2)
 
 ```
 
-Interpretation:
 
-# Type 3 (k -> 3)
+# Type 1
 
 ```{r, echo=TRUE}
 
+# --- Load Libraries ---
 library(dplyr)
+library(cluster)
 library(ggplot2)
-library(ggrepel)
 
 # --- Step 1: Filter for one vessel type ---
-vessel_type_selected3 <- 3
+vessel_type_selected <- 1  # change this to analyze another vessel type
 
-ceramics_subset3 <- ceramics_data %>%
-  filter(type_category == vessel_type_selected3) %>%
+ceramics_subset <- ceramics_data %>%
+  filter(type_category == vessel_type_selected) %>%
   mutate(
-    actual_width = na_if(actual_width, 0),
-    actual_diameter = na_if(actual_diameter, 0),
-    actual_height = na_if(actual_height, 0)
+    base_category = ifelse(is.na(base_category), "Bro", base_category),  # Treat NA as "Bro"
+    litres = round(na_if(litres, 0), 2),  # Round litres to 2 decimals
+    rim_collapsed = as.factor(rim_collapsed),
+    base_category = as.factor(base_category),
+    attributes = as.factor(attributes)
   ) %>%
-  drop_na(actual_width, actual_diameter, actual_height)
-
-# --- Step 2: Scale numeric data for fair comparison ---
-scaled_data3 <- scale(ceramics_subset3[, c("actual_width", "actual_diameter", "actual_height")])
-
-# --- Step 3: Perform clustering ---
-set.seed(123)
-kmeans_result3 <- kmeans(scaled_data3, centers = 3, nstart = 25)
-
-ceramics_subset3$cluster <- as.factor(kmeans_result3$cluster)
-
-# --- Step 4: Plot (Width × Height) with Cluster Colors and Orifice Diameter as Size ---
-ggplot(ceramics_subset3, aes(
-  x = actual_width,
-  y = actual_height,
-  color = cluster,
-  size = actual_diameter
-)) +
-  geom_point(alpha = 0.85, shape = 21, fill = NA, stroke = 1.2) +
-  geom_text_repel(
-    aes(label = vessel_number),
-    size = 2.5,
-    color = "black",
-    max.overlaps = Inf,
-    segment.color = "grey70",
-    segment.size = 0.3,
-    box.padding = 0.2,
-    point.padding = 0.2
-  ) +
-  scale_color_brewer(
-    name = "Cluster",
-    palette = "Set2"
-  ) +
-  scale_size_continuous(
-    name = "Orifice diameter (cm)",
-    range = c(2, 6)
-  ) +
-  labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected3),
-    x = "Actual Width (cm)",
-    y = "Actual Height (cm)"
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(
-    legend.position = "right",
-    plot.title = element_text(face = "bold", size = 14)
-  )
-
-# --- Step 5: List sites, vessel numbers, and clusters ---
-site_vessel_cluster_list3 <- ceramics_subset3 %>%
-  group_by(site_name) %>%
-  summarise(
-    vessels_and_clusters = paste0(
-      vessel_number, " (Cluster ", cluster, ")", collapse = ", "
-    )
-  ) %>%
-  arrange(site_name)
-
-# View the result in R console
-print(site_vessel_cluster_list3)
-
-```
-
-Interpretation:
-
-
-#Type 6 (k -> 8)
-
-```{r, echo=TRUE}
-
-library(dplyr)
-library(ggplot2)
-library(ggrepel)
-
-# --- Step 1: Filter for one vessel type ---
-vessel_type_selected6 <- 6
-
-ceramics_subset6 <- ceramics_data %>%
-  filter(type_category == vessel_type_selected6) %>%
-  mutate(
-    actual_width = na_if(actual_width, 0),
-    actual_diameter = na_if(actual_diameter, 0),
-    actual_height = na_if(actual_height, 0)
-  ) %>%
-  drop_na(actual_width, actual_diameter, actual_height)
-
-# --- Step 2: Scale numeric data for fair comparison ---
-scaled_data6 <- scale(ceramics_subset6[, c("actual_width", "actual_diameter", "actual_height")])
-
-# --- Step 3: Perform clustering ---
-set.seed(123)
-kmeans_result6 <- kmeans(scaled_data6, centers = 8, nstart = 25)
-
-ceramics_subset6$cluster <- as.factor(kmeans_result6$cluster)
-
-# --- Step 4: Plot (Width × Height) with Cluster Colors and Orifice Diameter as Size ---
-ggplot(ceramics_subset6, aes(
-  x = actual_width,
-  y = actual_height,
-  color = cluster,
-  size = actual_diameter
-)) +
-  geom_point(alpha = 0.85, shape = 21, fill = NA, stroke = 1.2) +
-  geom_text_repel(
-    aes(label = vessel_number),
-    size = 2.5,
-    color = "black",
-    max.overlaps = Inf,
-    segment.color = "grey70",
-    segment.size = 0.3,
-    box.padding = 0.2,
-    point.padding = 0.2
-  ) +
-  scale_color_brewer(
-    name = "Cluster",
-    palette = "Set2"
-  ) +
-  scale_size_continuous(
-    name = "Orifice diameter (cm)",
-    range = c(2, 6)
-  ) +
-  labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected6),
-    x = "Actual Width (cm)",
-    y = "Actual Height (cm)"
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(
-    legend.position = "right",
-    plot.title = element_text(face = "bold", size = 14)
-  )
-
-# --- Step 5: List sites, vessel numbers, and clusters ---
-site_vessel_cluster_list6 <- ceramics_subset6 %>%
-  group_by(site_name) %>%
-  summarise(
-    vessels_and_clusters = paste0(
-      vessel_number, " (Cluster ", cluster, ")", collapse = ", "
-    )
-  ) %>%
-  arrange(site_name)
-
-# View the result in R console
-print(site_vessel_cluster_list6)
-
-```
-
-Interpretation:
-
-# Type 7 (k -> 2)
-
-```{r, echo=TRUE}
-
-library(dplyr)
-library(ggplot2)
-library(ggrepel)
-
-# --- Step 1: Filter for one vessel type ---
-vessel_type_selected7 <- 7
-
-ceramics_subset7 <- ceramics_data %>%
-  filter(type_category == vessel_type_selected7) %>%
-  mutate(
-    actual_width = na_if(actual_width, 0),
-    actual_diameter = na_if(actual_diameter, 0),
-    actual_height = na_if(actual_height, 0)
-  ) %>%
-  drop_na(actual_width, actual_diameter, actual_height)
-
-# --- Step 2: Scale numeric data for fair comparison ---
-scaled_data7 <- scale(ceramics_subset7[, c("actual_width", "actual_diameter", "actual_height")])
-
-# --- Step 3: Perform clustering ---
-set.seed(123)
-kmeans_result7 <- kmeans(scaled_data7, centers = 2, nstart = 25)
-
-ceramics_subset7$cluster <- as.factor(kmeans_result7$cluster)
-
-# --- Step 4: Plot (Width × Height) with Cluster Colors and Orifice Diameter as Size ---
-ggplot(ceramics_subset7, aes(
-  x = actual_width,
-  y = actual_height,
-  color = cluster,
-  size = actual_diameter
-)) +
-  geom_point(alpha = 0.85, shape = 21, fill = NA, stroke = 1.2) +
-  geom_text_repel(
-    aes(label = vessel_number),
-    size = 2.5,
-    color = "black",
-    max.overlaps = Inf,
-    segment.color = "grey70",
-    segment.size = 0.3,
-    box.padding = 0.2,
-    point.padding = 0.2
-  ) +
-  scale_color_brewer(
-    name = "Cluster",
-    palette = "Set2"
-  ) +
-  scale_size_continuous(
-    name = "Orifice diameter (cm)",
-    range = c(2, 6)
-  ) +
-  labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected7),
-    x = "Actual Width (cm)",
-    y = "Actual Height (cm)"
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(
-    legend.position = "right",
-    plot.title = element_text(face = "bold", size = 14)
-  )
-
-# --- Step 5: List sites, vessel numbers, and clusters ---
-site_vessel_cluster_list7 <- ceramics_subset7 %>%
-  group_by(site_name) %>%
-  summarise(
-    vessels_and_clusters = paste0(
-      vessel_number, " (Cluster ", cluster, ")", collapse = ", "
-    )
-  ) %>%
-  arrange(site_name)
-
-# View the result in R console
-print(site_vessel_cluster_list7)
-
-```
-
-Interpretation:
-
-# Type 9 (k -> 2)
-
-```{r, echo=TRUE}
-
-library(dplyr)
-library(ggplot2)
-library(ggrepel)
-
-# --- Step 1: Filter for one vessel type ---
-vessel_type_selected9 <- 9
-
-ceramics_subset9 <- ceramics_data %>%
-  filter(type_category == vessel_type_selected9) %>%
-  mutate(
-    actual_width = na_if(actual_width, 0),
-    actual_diameter = na_if(actual_diameter, 0),
-    actual_height = na_if(actual_height, 0)
-  ) %>%
-  drop_na(actual_width, actual_diameter, actual_height)
-
-# --- Step 2: Scale numeric data for fair comparison ---
-scaled_data9 <- scale(ceramics_subset9[, c("actual_width", "actual_diameter", "actual_height")])
-
-# --- Step 3: Perform clustering ---
-set.seed(123)
-kmeans_result9 <- kmeans(scaled_data9, centers = 2, nstart = 25)
-
-ceramics_subset9$cluster <- as.factor(kmeans_result9$cluster)
-
-# --- Step 4: Plot (Width × Height) with Cluster Colors and Orifice Diameter as Size ---
-ggplot(ceramics_subset9, aes(
-  x = actual_width,
-  y = actual_height,
-  color = cluster,
-  size = actual_diameter
-)) +
-  geom_point(alpha = 0.85, shape = 21, fill = NA, stroke = 1.2) +
-  geom_text_repel(
-    aes(label = vessel_number),
-    size = 2.5,
-    color = "black",
-    max.overlaps = Inf,
-    segment.color = "grey70",
-    segment.size = 0.3,
-    box.padding = 0.2,
-    point.padding = 0.2
-  ) +
-  scale_color_brewer(
-    name = "Cluster",
-    palette = "Set2"
-  ) +
-  scale_size_continuous(
-    name = "Orifice diameter (cm)",
-    range = c(2, 6)
-  ) +
-  labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected9),
-    x = "Actual Width (cm)",
-    y = "Actual Height (cm)"
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(
-    legend.position = "right",
-    plot.title = element_text(face = "bold", size = 14)
-  )
-
-# --- Step 5: List sites, vessel numbers, and clusters ---
-site_vessel_cluster_list9 <- ceramics_subset9 %>%
-  group_by(site_name) %>%
-  summarise(
-    vessels_and_clusters = paste0(
-      vessel_number, " (Cluster ", cluster, ")", collapse = ", "
-    )
-  ) %>%
-  arrange(site_name)
-
-# View the result in R console
-print(site_vessel_cluster_list9)
-
-```
-
-Interpretation:
-
-# Type 10 (k -> 2)
-
-```{r, echo=TRUE}
-
-library(dplyr)
-library(ggplot2)
-library(ggrepel)
-
-# --- Step 1: Filter for one vessel type ---
-vessel_type_selected10 <- 10
-
-ceramics_subset10 <- ceramics_data %>%
-  filter(type_category == vessel_type_selected10) %>%
-  mutate(
-    actual_width = na_if(actual_width, 0),
-    actual_diameter = na_if(actual_diameter, 0),
-    actual_height = na_if(actual_height, 0)
-  ) %>%
-  drop_na(actual_width, actual_diameter, actual_height)
-
-# --- Step 2: Scale numeric data for fair comparison ---
-scaled_data10 <- scale(ceramics_subset10[, c("actual_width", "actual_diameter", "actual_height")])
-
-# --- Step 3: Perform clustering ---
-set.seed(123)
-kmeans_result10 <- kmeans(scaled_data10, centers = 2, nstart = 25)
-
-ceramics_subset10$cluster <- as.factor(kmeans_result10$cluster)
-
-# --- Step 4: Plot (Width × Height) with Cluster Colors and Orifice Diameter as Size ---
-ggplot(ceramics_subset10, aes(
-  x = actual_width,
-  y = actual_height,
-  color = cluster,
-  size = actual_diameter
-)) +
-  geom_point(alpha = 0.85, shape = 21, fill = NA, stroke = 1.2) +
-  geom_text_repel(
-    aes(label = vessel_number),
-    size = 2.5,
-    color = "black",
-    max.overlaps = Inf,
-    segment.color = "grey70",
-    segment.size = 0.3,
-    box.padding = 0.2,
-    point.padding = 0.2
-  ) +
-  scale_color_brewer(
-    name = "Cluster",
-    palette = "Set2"
-  ) +
-  scale_size_continuous(
-    name = "Orifice diameter (cm)",
-    range = c(2, 6)
-  ) +
-  labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected10),
-    x = "Actual Width (cm)",
-    y = "Actual Height (cm)"
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(
-    legend.position = "right",
-    plot.title = element_text(face = "bold", size = 14)
-  )
-
-# --- Step 5: List sites, vessel numbers, and clusters ---
-site_vessel_cluster_list10 <- ceramics_subset10 %>%
-  group_by(site_name) %>%
-  summarise(
-    vessels_and_clusters = paste0(
-      vessel_number, " (Cluster ", cluster, ")", collapse = ", "
-    )
-  ) %>%
-  arrange(site_name)
-
-# View the result in R console
-print(site_vessel_cluster_list10)
-
-```
-
-Interpretation:
-
-# Cluster analysis of rims, bases, attributes and decorations
-
-The following analysis which vessel types cluster with which rim-, base-, or attribute-types, and which vessel types of these most often have decorations. 
-
-#PCA
-
-```{r, echo=TRUE}
-library(dplyr)
-library(ggplot2)
-library(ggrepel)
-library(factoextra)
-
-# Step 1: Prepare data
-pca_data <- ceramics_data %>%
-  select(type_category, actual_width, actual_height, actual_diameter) %>%
-  filter(!is.na(actual_width) & !is.na(actual_height) & !is.na(actual_diameter) &
-         actual_width != 0 & actual_height != 0 & actual_diameter != 0)
-
-# Convert type_category to factor
-pca_data$type_category <- as.factor(pca_data$type_category)
-
-# Step 2: Perform PCA
-pca_res <- prcomp(pca_data[, c("actual_width", "actual_height", "actual_diameter")], scale. = TRUE)
-pca_scores <- as.data.frame(pca_res$x)
-pca_scores$type_category <- pca_data$type_category
-
-# Step 3: K-means clustering (k = 2)
-set.seed(123)
-k <- 2
-kmeans_res <- kmeans(scale(pca_data[, c("actual_width", "actual_height", "actual_diameter")]), centers = k, nstart = 25)
-pca_scores$cluster <- as.factor(kmeans_res$cluster)
-
-# Step 4: Cluster centroids in PCA space
-centroids <- pca_scores %>%
+  drop_na(litres)
+
+# --- Step 2: Compute Gower distance for mixed data ---
+mixed_data <- ceramics_subset[, c("litres", "rim_collapsed", "base_category", "attributes")]
+if (nrow(mixed_data) < 2) {
+  stop("Not enough data points for clustering")
+}
+
+gower_dist <- daisy(mixed_data, metric = "gower")
+
+# --- Step 3: Determine optimal number of clusters (2–10) ---
+if (nrow(ceramics_subset) < 2) {
+  cat("⚠️ Not enough data points for clustering (n =", nrow(ceramics_subset), ")\n")
+  optimal_k <- 1
+} else {
+  max_k <- min(10, nrow(ceramics_subset))
+  sil_widths <- numeric(max_k)
+  
+  for (k in 2:max_k) {
+    pam_fit <- pam(gower_dist, diss = TRUE, k = k)
+    sil_widths[k] <- pam_fit$silinfo$avg.width
+  }
+  optimal_k <- which.max(sil_widths)
+  cat("Optimal number of clusters:", optimal_k, "\n")
+}
+
+# --- Step 4: Perform clustering using optimal k ---
+if (optimal_k > 1) {
+  final_pam <- pam(gower_dist, diss = TRUE, k = optimal_k)
+  ceramics_subset$cluster <- as.factor(final_pam$clustering)
+} else {
+  ceramics_subset$cluster <- as.factor(1)
+}
+
+# --- Step 5: Print detailed cluster summary table ---
+cluster_summary <- ceramics_subset %>%
+  select(vessel_number, site_name, rim_collapsed, base_category, attributes, cluster) %>%
+  arrange(cluster, site_name)
+
+cat("\n=== Cluster Summary Table ===\n")
+print(cluster_summary, n = nrow(cluster_summary))
+
+# --- Step 6: Cluster dependency profiles (mean, median, min, max, SD) ---
+cluster_profiles <- ceramics_subset %>%
   group_by(cluster) %>%
   summarise(
-    PC1 = mean(PC1),
-    PC2 = mean(PC2)
+    n = n(),
+    mean_litres = mean(litres, na.rm = TRUE),
+    median_litres = median(litres, na.rm = TRUE),
+    min_litres = min(litres, na.rm = TRUE),
+    max_litres = max(litres, na.rm = TRUE),
+    sd_litres = sd(litres, na.rm = TRUE),
+    
+    most_common_rim = names(sort(table(rim_collapsed), decreasing = TRUE))[1],
+    most_common_base = names(sort(table(base_category), decreasing = TRUE))[1],
+    most_common_attr = names(sort(table(attributes), decreasing = TRUE))[1]
   )
 
-# Step 5: Plot PCA with clusters
-ggplot(pca_scores, aes(x = PC1, y = PC2, color = type_category)) +
-  geom_point(size = 3, alpha = 0.8) +
-  stat_ellipse(aes(group = cluster), type = "norm", linetype = 2, color = "black", alpha = 0.2) +
-  geom_point(data = centroids, aes(x = PC1, y = PC2), color = "black", size = 5, shape = 8) +
-  geom_text_repel(data = centroids, aes(x = PC1, y = PC2, label = paste("Cluster", cluster)),
-                  color = "black", size = 4) +
+cat("\n=== Cluster Dependency Summary ===\n")
+print(cluster_profiles, n = nrow(cluster_profiles))
+
+# --- Step 7: Visualize clusters ---
+ggplot(ceramics_subset, aes(x = litres, y = cluster, color = cluster)) +
+  geom_jitter(width = 0, height = 0.2, size = 3, alpha = 0.8) +
   labs(
-    title = "PCA of Vessel Sizes with 2 Clusters",
-    x = "Principal Component 1",
-    y = "Principal Component 2",
-    color = "Type Category"
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected),
+    subtitle = paste("Optimal clusters (k) =", optimal_k),
+    x = "Litres",
+    y = "Cluster",
+    color = "Cluster"
   ) +
-  theme_minimal(base_size = 13) +
-  scale_color_manual(values = rainbow(length(unique(pca_scores$type_category))))
+  theme_minimal(base_size = 13)
 
 ```
-I must define what makes up the principal components! Perhaps I have too few criteria to make a PCA???
 
 
