@@ -73,7 +73,6 @@ To better understand my data I have made a document to explore the data:
 # install.packages("ggplot2")
 # install.packages("factoextra") # For visualizing clusters
 # install.packages("cluster")
-# install.packages("ggplot2")
 # install.packages("cowplot")
 # install.packages("tidyr")
 # install.packages("stringr")
@@ -88,10 +87,16 @@ To better understand my data I have made a document to explore the data:
 # install.packages("tidyverse")
 # install.packages("plotly")
 # install.packages("ggforce")
+# install.packages("fs")
+# install.packages("cli")
+# install.packages(c("devtools", "cli", "fs", "rlang", "glue", "lifecycle"))
+
 
 # Load necessary libraries:
 
-library(devtools)
+library(cli)
+library(fs)
+#library(devtools)
 library(remotes)
 library(readxl)
 library(dplyr)
@@ -147,7 +152,7 @@ head(ceramics_data)
 ceramics_subset <- ceramics_data %>%
 #  filter(actual_diameter != 0.0) %>%   #Only filter the 0,0s later!
   select(site_name, type_category, size_category, rim_category, base_category, 
-         attributes, actual_diameter, actual_height, actual_width)
+         att_category, actual_diameter, actual_height, actual_width)
 
 ```
 
@@ -606,8 +611,8 @@ Simple boxplot
 
 ```{r, echo=TRUE}
 ceramics_data %>% 
-drop_na(attributes) %>% 
-ggplot(aes(x = attributes)) +
+drop_na(att_category) %>% 
+ggplot(aes(x = att_category)) +
   geom_bar() +
   labs(x = "Attribute Category", y = "Count", title = "Counts per Attribute Category") +
   theme_minimal()
@@ -627,7 +632,7 @@ Let's make the plot nicer
 #library(cowplot)
 
 # Create a data frame to count the number of data points for each vessel type
-attribute_counts <- data.frame(table(ceramics_subset$attributes))
+attribute_counts <- data.frame(table(ceramics_subset$att_category))
 colnames(attribute_counts) <- c("attributes", "Count")
 
 # Calculate total number of attribute data points
@@ -3452,6 +3457,7 @@ ggplot(optimal_clusters, aes(x = factor(type_category), y = optimal_k)) +
 
 
 ```
+OBS: Try to make a cluster analysis on the collapsed rim types and compare it to above!
 
 WAY better!!
 
@@ -4448,186 +4454,4 @@ ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster
 ```
 
 Interpretation: The Jenne-jeno vessels are in their own cluster -> used for graves!
-
-#PAM clustering of litres, rim_collapsed, base_category, attributes
-
-```{r, echo=TRUE}
-
-# --- Load Libraries ---
-library(dplyr)
-library(cluster)
-library(ggplot2)
-library(purrr)
-library(tidyr)
-
-# --- Prepare data ---
-ceramics_filtered <- ceramics_data %>%
-  mutate(
-    across(c(actual_width, actual_diameter, actual_height, litres), ~na_if(.x, 0)),
-    rim_collapsed = as.factor(rim_collapsed),
-    base_category = if_else(is.na(base_category) | base_category == "", "Bro", base_category), #makes NAs into Bro bases
-    base_category = as.factor(base_category),
-    attributes = as.factor(attributes)  # make sure attributes is treated as categorical
-  ) %>%
-  filter(!is.na(actual_width) & !is.na(actual_diameter) & !is.na(actual_height) & !is.na(litres))
-
-# --- Function to find optimal clusters (mixed numeric + categorical) ---
-find_optimal_clusters_mixed <- function(df) {
-  mixed_data <- df %>% select(litres, rim_collapsed, base_category, attributes)
-  gower_dist <- daisy(mixed_data, metric = "gower")
-  max_k <- min(10, nrow(df) - 1)
-  if (nrow(df) < 3) return(NA)
-  
-  sil_values <- map_dbl(2:max_k, function(k) {
-    pam_fit <- pam(gower_dist, k)
-    pam_fit$silinfo$avg.width
-  })
-  optimal_k <- which.max(sil_values) + 1
-  return(optimal_k)
-}
-
-# --- Calculate optimal clusters per vessel type ---
-optimal_clusters <- ceramics_filtered %>%
-  group_by(type_category) %>%
-  summarise(
-    n_datapoints = n(),
-    optimal_k = find_optimal_clusters_mixed(cur_data())
-  ) %>%
-  ungroup()
-
-# --- Assign clusters ---
-clustered_data <- ceramics_filtered %>%
-  group_by(type_category) %>%
-  group_modify(~{
-    mixed_data <- .x %>% select(actual_width, actual_diameter, actual_height, litres, rim_collapsed, base_category, attributes)
-    gower_dist <- daisy(mixed_data, metric = "gower")
-    
-    optimal_k <- find_optimal_clusters_mixed(.x)
-    if (is.na(optimal_k) || optimal_k < 2) {
-      .x$cluster <- 1
-    } else {
-      pam_fit <- pam(gower_dist, optimal_k)
-      .x$cluster <- pam_fit$clustering
-    }
-    .x
-  }) %>%
-  ungroup()
-
-# --- Plot: Optimal clusters per type ---
-ggplot(optimal_clusters, aes(x = factor(type_category), y = optimal_k)) +
-  geom_col(fill = "steelblue") +
-  geom_text(aes(label = paste0("k=", optimal_k, "\n(n=", n_datapoints, ")")),
-            vjust = -0.6, fontface = "plain", size = 3) +
-  labs(
-    title = "Optimal Number of Clusters per Vessel Type",
-    x = "Vessel Type",
-    y = "Optimal Cluster Count"
-  ) +
-  expand_limits(y = max(optimal_clusters$optimal_k, na.rm = TRUE) + 2) +
-  theme_minimal(base_size = 14) +
-  theme(
-    plot.title = element_text(face = "bold"),
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
-
-
-```
-
-
-# Type 1
-
-```{r, echo=TRUE}
-
-# --- Load Libraries ---
-library(dplyr)
-library(cluster)
-library(ggplot2)
-
-# --- Step 1: Filter for one vessel type ---
-vessel_type_selected <- 1  # change this to analyze another vessel type
-
-ceramics_subset <- ceramics_data %>%
-  filter(type_category == vessel_type_selected) %>%
-  mutate(
-    base_category = ifelse(is.na(base_category), "Bro", base_category),  # Treat NA as "Bro"
-    litres = round(na_if(litres, 0), 2),  # Round litres to 2 decimals
-    rim_collapsed = as.factor(rim_collapsed),
-    base_category = as.factor(base_category),
-    attributes = as.factor(attributes)
-  ) %>%
-  drop_na(litres)
-
-# --- Step 2: Compute Gower distance for mixed data ---
-mixed_data <- ceramics_subset[, c("litres", "rim_collapsed", "base_category", "attributes")]
-if (nrow(mixed_data) < 2) {
-  stop("Not enough data points for clustering")
-}
-
-gower_dist <- daisy(mixed_data, metric = "gower")
-
-# --- Step 3: Determine optimal number of clusters (2–10) ---
-if (nrow(ceramics_subset) < 2) {
-  cat("⚠️ Not enough data points for clustering (n =", nrow(ceramics_subset), ")\n")
-  optimal_k <- 1
-} else {
-  max_k <- min(10, nrow(ceramics_subset))
-  sil_widths <- numeric(max_k)
-  
-  for (k in 2:max_k) {
-    pam_fit <- pam(gower_dist, diss = TRUE, k = k)
-    sil_widths[k] <- pam_fit$silinfo$avg.width
-  }
-  optimal_k <- which.max(sil_widths)
-  cat("Optimal number of clusters:", optimal_k, "\n")
-}
-
-# --- Step 4: Perform clustering using optimal k ---
-if (optimal_k > 1) {
-  final_pam <- pam(gower_dist, diss = TRUE, k = optimal_k)
-  ceramics_subset$cluster <- as.factor(final_pam$clustering)
-} else {
-  ceramics_subset$cluster <- as.factor(1)
-}
-
-# --- Step 5: Print detailed cluster summary table ---
-cluster_summary <- ceramics_subset %>%
-  select(vessel_number, site_name, rim_collapsed, base_category, attributes, cluster) %>%
-  arrange(cluster, site_name)
-
-cat("\n=== Cluster Summary Table ===\n")
-print(cluster_summary, n = nrow(cluster_summary))
-
-# --- Step 6: Cluster dependency profiles (mean, median, min, max, SD) ---
-cluster_profiles <- ceramics_subset %>%
-  group_by(cluster) %>%
-  summarise(
-    n = n(),
-    mean_litres = mean(litres, na.rm = TRUE),
-    median_litres = median(litres, na.rm = TRUE),
-    min_litres = min(litres, na.rm = TRUE),
-    max_litres = max(litres, na.rm = TRUE),
-    sd_litres = sd(litres, na.rm = TRUE),
-    
-    most_common_rim = names(sort(table(rim_collapsed), decreasing = TRUE))[1],
-    most_common_base = names(sort(table(base_category), decreasing = TRUE))[1],
-    most_common_attr = names(sort(table(attributes), decreasing = TRUE))[1]
-  )
-
-cat("\n=== Cluster Dependency Summary ===\n")
-print(cluster_profiles, n = nrow(cluster_profiles))
-
-# --- Step 7: Visualize clusters ---
-ggplot(ceramics_subset, aes(x = litres, y = cluster, color = cluster)) +
-  geom_jitter(width = 0, height = 0.2, size = 3, alpha = 0.8) +
-  labs(
-    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected),
-    subtitle = paste("Optimal clusters (k) =", optimal_k),
-    x = "Litres",
-    y = "Cluster",
-    color = "Cluster"
-  ) +
-  theme_minimal(base_size = 13)
-
-```
-
 
