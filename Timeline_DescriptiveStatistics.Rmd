@@ -96,7 +96,7 @@ To better understand my data I have made a document to explore the data:
 
 library(cli)
 library(fs)
-#library(devtools)
+library(devtools)
 library(remotes)
 library(readxl)
 library(dplyr)
@@ -3364,6 +3364,8 @@ PAM is conceptually similar to k-means, but:
 
 The code uses "pam(gower_dist, k)" which clusters the vessels based on their Gower dissimilarity matrix.
 
+# Cluster analysis per vessel type including 'width, height, orifice, rim, base'
+
 ```{r, echo=TRUE}
 
 # --- Load Libraries ---
@@ -3459,9 +3461,114 @@ ggplot(optimal_clusters, aes(x = factor(type_category), y = optimal_k)) +
 ```
 OBS: Try to make a cluster analysis on the collapsed rim types and compare it to above!
 
-WAY better!!
-
 OBS: When there is no data on the base of the vessel then they are treated as having a round base (Bro)
+
+# Cluster analysis per vessel type including size group, rim, base
+
+```{r, echo=TRUE}
+
+# --- Load Libraries ---
+library(dplyr)
+library(cluster)
+library(ggplot2)
+library(purrr)
+library(tidyr)
+
+library(dplyr)
+library(cluster)
+library(purrr)
+library(ggplot2)
+
+# --- Prepare data: clean categories ---
+ceramics_cat <- ceramics_data %>%
+  mutate(
+    size_category = as.factor(size_category),
+    rim_category  = as.factor(rim_category),
+    base_category = if_else(is.na(base_category) | base_category == "", 
+                            "Bro", base_category),   # Replace NA with "Bro"
+    base_category = as.factor(base_category)
+  )
+
+# --- Function: determine optimal clusters for categorical data ---
+find_optimal_clusters <- function(df) {
+  
+  cat_data <- df %>% select(size_category, rim_category, base_category)
+
+  # Must have at least 3 rows to cluster
+  if (nrow(cat_data) < 3) return(NA)
+
+  # Compute Gower distance
+  gower_dist <- daisy(cat_data, metric = "gower")
+
+  max_k <- min(10, nrow(cat_data) - 1)
+
+  sil_values <- map_dbl(2:max_k, function(k) {
+    pam_fit <- pam(gower_dist, k)
+    pam_fit$silinfo$avg.width
+  })
+
+  optimal_k <- which.max(sil_values) + 1
+  return(optimal_k)
+}
+
+# --- Compute optimal clusters for each vessel type ---
+optimal_clusters <- ceramics_cat %>%
+  group_by(type_category) %>%
+  summarise(
+    n = n(),
+    optimal_k = find_optimal_clusters(cur_data()),
+    .groups = "drop"
+  )
+
+# --- Assign clusters per vessel type ---
+clustered_data <- ceramics_cat %>%
+  group_by(type_category) %>%
+  group_modify(~{
+    df <- .x %>% select(size_category, rim_category, base_category)
+
+    # Find optimal k
+    opt_k <- find_optimal_clusters(.x)
+
+    # If too few rows, assign all to 1 cluster
+    if (is.na(opt_k) || opt_k < 2) {
+      .x$cluster <- 1
+    } else {
+      gower_dist <- daisy(df, metric = "gower")
+      pam_fit <- pam(gower_dist, opt_k)
+      .x$cluster <- pam_fit$clustering
+    }
+
+    .x
+  }) %>%
+  ungroup()
+
+# --- Summary table of clusters ---
+cluster_summary <- clustered_data %>%
+  group_by(type_category, cluster) %>%
+  summarise(
+    vessels = paste(unique(vessel_number), collapse = ", "),
+    rim_types = paste(unique(rim_category), collapse = ", "),
+    base_types = paste(unique(base_category), collapse = ", "),
+    size_categories = paste(unique(size_category), collapse = ", "),
+    .groups = "drop"
+  )
+
+print(cluster_summary, n = Inf)
+
+# --- Plot: optimal clusters per vessel type ---
+ggplot(optimal_clusters, aes(x = factor(type_category), y = optimal_k)) +
+  geom_col(fill = "steelblue") +
+  geom_text(aes(label = paste0("k=", optimal_k, "\n(n=", n, ")")),
+            vjust = -0.6, size = 3) +
+  labs(
+    title = "Optimal Number of Clusters per Vessel Type (size group, rim, base)",
+    x = "Vessel Type",
+    y = "Optimal k"
+  ) +
+  theme_minimal(base_size = 14) +
+  expand_limits(y = max(optimal_clusters$optimal_k, na.rm = TRUE) + 2)
+
+```
 
 number of data points Comment:
 
@@ -3517,6 +3624,8 @@ ceramics_subset <- ceramics_data %>%
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
     actual_height = na_if(actual_height, 0),
+    litres = na_if(litres, 0),
+    litres = round(litres, 2),
     rim_category = as.factor(rim_category),
     base_category = as.factor(base_category)
   ) %>%
@@ -3571,6 +3680,12 @@ cluster_profiles <- ceramics_subset %>%
     min_height = min(actual_height, na.rm = TRUE),
     max_height = max(actual_height, na.rm = TRUE),
     sd_height = sd(actual_height, na.rm = TRUE),
+    
+    mean_litres = mean(litres, na.rm = TRUE),
+    median_litres = median(litres, na.rm = TRUE),
+    min_litres = min(litres, na.rm = TRUE),
+    max_litres = max(litres, na.rm = TRUE),
+    sd_litres = sd(litres, na.rm = TRUE),
 
     most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
     most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
@@ -3611,6 +3726,8 @@ ceramics_subset <- ceramics_data %>%
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
     actual_height = na_if(actual_height, 0),
+    litres = na_if(litres, 0),
+    litres = round(litres, 2),
     rim_category = as.factor(rim_category),
     base_category = as.factor(base_category)
   ) %>%
@@ -3665,6 +3782,12 @@ cluster_profiles <- ceramics_subset %>%
     min_height = min(actual_height, na.rm = TRUE),
     max_height = max(actual_height, na.rm = TRUE),
     sd_height = sd(actual_height, na.rm = TRUE),
+    
+    mean_litres = mean(litres, na.rm = TRUE),
+    median_litres = median(litres, na.rm = TRUE),
+    min_litres = min(litres, na.rm = TRUE),
+    max_litres = max(litres, na.rm = TRUE),
+    sd_litres = sd(litres, na.rm = TRUE),
 
     most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
     most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
@@ -3707,6 +3830,8 @@ ceramics_subset <- ceramics_data %>%
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
     actual_height = na_if(actual_height, 0),
+    litres = na_if(litres, 0),
+    litres = round(litres, 2),
     rim_category = as.factor(rim_category),
     base_category = as.factor(base_category)
   ) %>%
@@ -3761,6 +3886,12 @@ cluster_profiles <- ceramics_subset %>%
     min_height = min(actual_height, na.rm = TRUE),
     max_height = max(actual_height, na.rm = TRUE),
     sd_height = sd(actual_height, na.rm = TRUE),
+    
+    mean_litres = mean(litres, na.rm = TRUE),
+    median_litres = median(litres, na.rm = TRUE),
+    min_litres = min(litres, na.rm = TRUE),
+    max_litres = max(litres, na.rm = TRUE),
+    sd_litres = sd(litres, na.rm = TRUE),
 
     most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
     most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
@@ -3803,6 +3934,8 @@ ceramics_subset <- ceramics_data %>%
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
     actual_height = na_if(actual_height, 0),
+    litres = na_if(litres, 0),
+    litres = round(litres, 2),
     rim_category = as.factor(rim_category),
     base_category = as.factor(base_category)
   ) %>%
@@ -3857,6 +3990,12 @@ cluster_profiles <- ceramics_subset %>%
     min_height = min(actual_height, na.rm = TRUE),
     max_height = max(actual_height, na.rm = TRUE),
     sd_height = sd(actual_height, na.rm = TRUE),
+    
+    mean_litres = mean(litres, na.rm = TRUE),
+    median_litres = median(litres, na.rm = TRUE),
+    min_litres = min(litres, na.rm = TRUE),
+    max_litres = max(litres, na.rm = TRUE),
+    sd_litres = sd(litres, na.rm = TRUE),
 
     most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
     most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
@@ -3899,6 +4038,8 @@ ceramics_subset <- ceramics_data %>%
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
     actual_height = na_if(actual_height, 0),
+    litres = na_if(litres, 0),
+    litres = round(litres, 2),
     rim_category = as.factor(rim_category),
     base_category = as.factor(base_category)
   ) %>%
@@ -3953,6 +4094,12 @@ cluster_profiles <- ceramics_subset %>%
     min_height = min(actual_height, na.rm = TRUE),
     max_height = max(actual_height, na.rm = TRUE),
     sd_height = sd(actual_height, na.rm = TRUE),
+    
+    mean_litres = mean(litres, na.rm = TRUE),
+    median_litres = median(litres, na.rm = TRUE),
+    min_litres = min(litres, na.rm = TRUE),
+    max_litres = max(litres, na.rm = TRUE),
+    sd_litres = sd(litres, na.rm = TRUE),
 
     most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
     most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
@@ -3972,6 +4119,7 @@ ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster
     color = "Cluster"
   ) +
   theme_minimal(base_size = 13)
+
 ```
 
 Interpretation:
@@ -3994,6 +4142,8 @@ ceramics_subset <- ceramics_data %>%
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
     actual_height = na_if(actual_height, 0),
+    litres = na_if(litres, 0),
+    litres = round(litres, 2),
     rim_category = as.factor(rim_category),
     base_category = as.factor(base_category)
   ) %>%
@@ -4048,6 +4198,12 @@ cluster_profiles <- ceramics_subset %>%
     min_height = min(actual_height, na.rm = TRUE),
     max_height = max(actual_height, na.rm = TRUE),
     sd_height = sd(actual_height, na.rm = TRUE),
+    
+    mean_litres = mean(litres, na.rm = TRUE),
+    median_litres = median(litres, na.rm = TRUE),
+    min_litres = min(litres, na.rm = TRUE),
+    max_litres = max(litres, na.rm = TRUE),
+    sd_litres = sd(litres, na.rm = TRUE),
 
     most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
     most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
@@ -4076,10 +4232,6 @@ Interpretation: I do not know if 8 clusters are the correct number..
 
 ```{r, echo=TRUE}
 
-library(dplyr)
-library(cluster)
-library(ggplot2)
-
 # --- Step 1: Filter for one vessel type ---
 vessel_type_selected <- 7  # change this to analyze another vessel type
 
@@ -4090,6 +4242,8 @@ ceramics_subset <- ceramics_data %>%
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
     actual_height = na_if(actual_height, 0),
+    litres = na_if(litres, 0),
+    litres = round(litres, 2),
     rim_category = as.factor(rim_category),
     base_category = as.factor(base_category)
   ) %>%
@@ -4144,6 +4298,12 @@ cluster_profiles <- ceramics_subset %>%
     min_height = min(actual_height, na.rm = TRUE),
     max_height = max(actual_height, na.rm = TRUE),
     sd_height = sd(actual_height, na.rm = TRUE),
+    
+    mean_litres = mean(litres, na.rm = TRUE),
+    median_litres = median(litres, na.rm = TRUE),
+    min_litres = min(litres, na.rm = TRUE),
+    max_litres = max(litres, na.rm = TRUE),
+    sd_litres = sd(litres, na.rm = TRUE),
 
     most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
     most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
@@ -4186,6 +4346,8 @@ ceramics_subset <- ceramics_data %>%
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
     actual_height = na_if(actual_height, 0),
+    litres = na_if(litres, 0),
+    litres = round(litres, 2),
     rim_category = as.factor(rim_category),
     base_category = as.factor(base_category)
   ) %>%
@@ -4240,6 +4402,12 @@ cluster_profiles <- ceramics_subset %>%
     min_height = min(actual_height, na.rm = TRUE),
     max_height = max(actual_height, na.rm = TRUE),
     sd_height = sd(actual_height, na.rm = TRUE),
+    
+    mean_litres = mean(litres, na.rm = TRUE),
+    median_litres = median(litres, na.rm = TRUE),
+    min_litres = min(litres, na.rm = TRUE),
+    max_litres = max(litres, na.rm = TRUE),
+    sd_litres = sd(litres, na.rm = TRUE),
 
     most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
     most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
@@ -4259,6 +4427,7 @@ ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster
     color = "Cluster"
   ) +
   theme_minimal(base_size = 13)
+
 ```
 
 Interpretation:
@@ -4281,6 +4450,8 @@ ceramics_subset <- ceramics_data %>%
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
     actual_height = na_if(actual_height, 0),
+    litres = na_if(litres, 0),
+    litres = round(litres, 2),
     rim_category = as.factor(rim_category),
     base_category = as.factor(base_category)
   ) %>%
@@ -4335,6 +4506,12 @@ cluster_profiles <- ceramics_subset %>%
     min_height = min(actual_height, na.rm = TRUE),
     max_height = max(actual_height, na.rm = TRUE),
     sd_height = sd(actual_height, na.rm = TRUE),
+    
+    mean_litres = mean(litres, na.rm = TRUE),
+    median_litres = median(litres, na.rm = TRUE),
+    min_litres = min(litres, na.rm = TRUE),
+    max_litres = max(litres, na.rm = TRUE),
+    sd_litres = sd(litres, na.rm = TRUE),
 
     most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
     most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
@@ -4377,6 +4554,8 @@ ceramics_subset <- ceramics_data %>%
     actual_width = na_if(actual_width, 0),
     actual_diameter = na_if(actual_diameter, 0),
     actual_height = na_if(actual_height, 0),
+    litres = na_if(litres, 0),
+    litres = round(litres, 2),
     rim_category = as.factor(rim_category),
     base_category = as.factor(base_category)
   ) %>%
@@ -4431,6 +4610,12 @@ cluster_profiles <- ceramics_subset %>%
     min_height = min(actual_height, na.rm = TRUE),
     max_height = max(actual_height, na.rm = TRUE),
     sd_height = sd(actual_height, na.rm = TRUE),
+    
+    mean_litres = mean(litres, na.rm = TRUE),
+    median_litres = median(litres, na.rm = TRUE),
+    min_litres = min(litres, na.rm = TRUE),
+    max_litres = max(litres, na.rm = TRUE),
+    sd_litres = sd(litres, na.rm = TRUE),
 
     most_common_rim = names(sort(table(rim_category), decreasing = TRUE))[1],
     most_common_base = names(sort(table(base_category), decreasing = TRUE))[1]
