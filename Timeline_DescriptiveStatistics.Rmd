@@ -3293,6 +3293,10 @@ print(optimal_clusters)
 
 ```
 
+---------------------------------------------------------------------
+# 1 Cluster analysis per vessel type including orifice, width, height
+---------------------------------------------------------------------
+
 ``` {r, echo=TRUE}
 library(dplyr)
 library(cluster)
@@ -3337,12 +3341,12 @@ ggplot(optimal_clusters, aes(x = factor(type_category), y = optimal_k)) +
   geom_text(aes(label = paste0("k=", optimal_k, "\n(n=", n_datapoints, ")")),
             vjust = -0.6, size = 3) +
   labs(
-    title = "Optimal Number of Clusters using only size variables",
+    title = "Optimal Number of Clusters per Vessel Type (orifice, width, height)",
     x = "Vessel Type",
     y = "Optimal Cluster Count"
   ) +
   expand_limits(y = max(optimal_clusters$optimal_k, na.rm = TRUE) + 2) +  # add top space
-  theme_minimal(base_size = 14) +
+  theme_minimal(base_size = 8) +
   theme(
     plot.title = element_text(face = "bold"),
     axis.text.x = element_text(angle = 45, hjust = 1)
@@ -3386,7 +3390,9 @@ PAM is conceptually similar to k-means, but:
 
 The code uses "pam(gower_dist, k)" which clusters the vessels based on their Gower dissimilarity matrix.
 
-# 1.1 Cluster analysis per vessel type including 'width, height, orifice, rim, base' -> actual!
+----------------------------------------------------------------------------------------------
+# 1.1 Cluster analysis per vessel type including width, height, orifice, rim, base, attributes
+----------------------------------------------------------------------------------------------
 
 ```{r, echo=TRUE}
 
@@ -3402,6 +3408,7 @@ ceramics_filtered <- ceramics_data %>%
   mutate(
     across(c(actual_width, actual_diameter, actual_height), ~na_if(.x, 0)),
     rim_category = as.factor(rim_category),
+    att_category = as.factor(att_category),
     base_category = if_else(is.na(base_category) | base_category == "", "Bro", base_category),
     base_category = as.factor(base_category)
   ) %>%
@@ -3409,7 +3416,7 @@ ceramics_filtered <- ceramics_data %>%
 
 # Function to find optimal clusters (mixed numeric + categorical)
 find_optimal_clusters_mixed <- function(df) {
-  mixed_data <- df %>% select(actual_width, actual_diameter, actual_height, rim_category, base_category)
+  mixed_data <- df %>% select(actual_width, actual_diameter, actual_height, rim_category, att_category, base_category)
   gower_dist <- daisy(mixed_data, metric = "gower")
   max_k <- min(10, nrow(df) - 1)
   if (nrow(df) < 3) return(NA)
@@ -3435,7 +3442,7 @@ optimal_clusters <- ceramics_filtered %>%
 clustered_data <- ceramics_filtered %>%
   group_by(type_category) %>%
   group_modify(~{
-    mixed_data <- .x %>% select(actual_width, actual_diameter, actual_height, rim_category, base_category)
+    mixed_data <- .x %>% select(actual_width, actual_diameter, actual_height, rim_category, att_category, base_category)
     gower_dist <- daisy(mixed_data, metric = "gower")
     
     optimal_k <- find_optimal_clusters_mixed(.x)
@@ -3456,6 +3463,7 @@ cluster_summary <- clustered_data %>%
     vessel_numbers = paste(unique(vessel_number), collapse = ", "),
     rim_types = paste(unique(rim_category), collapse = ", "),
     base_types = paste(unique(base_category), collapse = ", "),
+    att_types = paste(unique(att_category), collapse = ", "),
     .groups = "drop"
   )
 
@@ -3468,12 +3476,12 @@ ggplot(optimal_clusters, aes(x = factor(type_category), y = optimal_k)) +
   geom_text(aes(label = paste0("k=", optimal_k, "\n(n=", n_datapoints, ")")),
             vjust = -0.6, fontface = "plain", size = 3) +
   labs(
-    title = "Optimal Number of Clusters per Vessel Type",
+    title = "Optimal Number of Clusters per Vessel Type (orifice, width, height, rim, base, attribtues)",
     x = "Vessel Type",
     y = "Optimal Cluster Count"
   ) +
   expand_limits(y = max(optimal_clusters$optimal_k, na.rm = TRUE) + 2) +
-  theme_minimal(base_size = 14) +
+  theme_minimal(base_size = 8) +
   theme(
     plot.title = element_text(face = "bold"),
     axis.text.x = element_text(angle = 45, hjust = 1)
@@ -3485,114 +3493,11 @@ OBS: Try to make a cluster analysis on the collapsed rim types and compare it to
 
 OBS: When there is no data on the base of the vessel then they are treated as having a round base (Bro)
 
-# (BAD) Cluster analysis per vessel type including size group, rim, base
-
-```{r, echo=TRUE}
-
-# --- Load Libraries ---
-library(dplyr)
-library(cluster)
-library(ggplot2)
-library(purrr)
-library(tidyr)
-
-library(dplyr)
-library(cluster)
-library(purrr)
-library(ggplot2)
-
-# --- Prepare data: clean categories ---
-ceramics_cat <- ceramics_data %>%
-  mutate(
-    size_category = as.factor(size_category),
-    rim_category  = as.factor(rim_category),
-    base_category = if_else(is.na(base_category) | base_category == "", 
-                            "Bro", base_category),   # Replace NA with "Bro"
-    base_category = as.factor(base_category)
-  )
-
-# --- Function: determine optimal clusters for categorical data ---
-find_optimal_clusters <- function(df) {
-  
-  cat_data <- df %>% select(size_category, rim_category, base_category)
-
-  # Must have at least 3 rows to cluster
-  if (nrow(cat_data) < 3) return(NA)
-
-  # Compute Gower distance
-  gower_dist <- daisy(cat_data, metric = "gower")
-
-  max_k <- min(10, nrow(cat_data) - 1)
-
-  sil_values <- map_dbl(2:max_k, function(k) {
-    pam_fit <- pam(gower_dist, k)
-    pam_fit$silinfo$avg.width
-  })
-
-  optimal_k <- which.max(sil_values) + 1
-  return(optimal_k)
-}
-
-# --- Compute optimal clusters for each vessel type ---
-optimal_clusters <- ceramics_cat %>%
-  group_by(type_category) %>%
-  summarise(
-    n = n(),
-    optimal_k = find_optimal_clusters(cur_data()),
-    .groups = "drop"
-  )
-
-# --- Assign clusters per vessel type ---
-clustered_data <- ceramics_cat %>%
-  group_by(type_category) %>%
-  group_modify(~{
-    df <- .x %>% select(size_category, rim_category, base_category)
-
-    # Find optimal k
-    opt_k <- find_optimal_clusters(.x)
-
-    # If too few rows, assign all to 1 cluster
-    if (is.na(opt_k) || opt_k < 2) {
-      .x$cluster <- 1
-    } else {
-      gower_dist <- daisy(df, metric = "gower")
-      pam_fit <- pam(gower_dist, opt_k)
-      .x$cluster <- pam_fit$clustering
-    }
-
-    .x
-  }) %>%
-  ungroup()
-
-# --- Summary table of clusters ---
-cluster_summary <- clustered_data %>%
-  group_by(type_category, cluster) %>%
-  summarise(
-    vessels = paste(unique(vessel_number), collapse = ", "),
-    rim_types = paste(unique(rim_category), collapse = ", "),
-    base_types = paste(unique(base_category), collapse = ", "),
-    size_categories = paste(unique(size_category), collapse = ", "),
-    .groups = "drop"
-  )
-
-print(cluster_summary, n = Inf)
-
-# --- Plot: optimal clusters per vessel type ---
-ggplot(optimal_clusters, aes(x = factor(type_category), y = optimal_k)) +
-  geom_col(fill = "steelblue") +
-  geom_text(aes(label = paste0("k=", optimal_k, "\n(n=", n, ")")),
-            vjust = -0.6, size = 3) +
-  labs(
-    title = "Optimal Number of Clusters per Vessel Type (size group, rim, base)",
-    x = "Vessel Type",
-    y = "Optimal k"
-  ) +
-  theme_minimal(base_size = 14) +
-  expand_limits(y = max(optimal_clusters$optimal_k, na.rm = TRUE) + 2)
-
-```
-
+--------------------------------------------------------------------------------------------------------
 # 1.2 Cluster analysis per vessel type including orifice, width, height, collapsed rim, base, attributes
+--------------------------------------------------------------------------------------------------------
+
+OBS: This is the one used for the appendix
 
 ```{r, echo=TRUE}
 
@@ -3676,12 +3581,12 @@ ggplot(optimal_clusters, aes(x = factor(type_category), y = optimal_k)) +
   geom_text(aes(label = paste0("k=", optimal_k, "\n(n=", n_datapoints, ")")),
             vjust = -0.6, fontface = "plain", size = 3) +
   labs(
-    title = "Optimal Number of Clusters per Vessel Type",
+    title = "Optimal Number of Clusters per Vessel Type (orifice, width, height, coll. rim, base, attribtues)",
     x = "Vessel Type",
     y = "Optimal Cluster Count"
   ) +
   expand_limits(y = max(optimal_clusters$optimal_k, na.rm = TRUE) + 2) +
-  theme_minimal(base_size = 14) +
+  theme_minimal(base_size = 8) +
   theme(
     plot.title = element_text(face = "bold"),
     axis.text.x = element_text(angle = 45, hjust = 1)
@@ -3689,7 +3594,106 @@ ggplot(optimal_clusters, aes(x = factor(type_category), y = optimal_k)) +
 
 ```
 
+----------------------------------------------------------------------------------------
+# 1.3 Cluster analysis per vessel type including litres, collapsed rim, base, attributes
+----------------------------------------------------------------------------------------
 
+OBS: Types 14+15 are not included because there is not calculated any litres!
+
+```{r, echo=TRUE}
+
+# --- Load Libraries ---
+library(dplyr)
+library(cluster)
+library(ggplot2)
+library(purrr)
+library(tidyr)
+
+# Prepare data: clean zeros, NAs, and set up categorical variables
+ceramics_filtered <- ceramics_data %>%
+  mutate(
+    across(c(actual_width, actual_diameter, actual_height), ~na_if(.x, 0)),
+    rim_collapsed = as.factor(rim_collapsed),
+    att_category = as.factor(att_category),
+    base_category = if_else(is.na(base_category) | base_category == "", "Bro", base_category),
+    base_category = as.factor(base_category)
+  ) %>%
+  filter(!is.na(actual_width) & !is.na(actual_diameter) & !is.na(actual_height) & !is.na(litres))
+
+# Function to find optimal clusters (mixed numeric + categorical)
+find_optimal_clusters_mixed <- function(df) {
+  mixed_data <- df %>% select(litres, rim_collapsed, att_category, base_category)
+  gower_dist <- daisy(mixed_data, metric = "gower")
+  max_k <- min(10, nrow(df) - 1)
+  if (nrow(df) < 3) return(NA)
+  
+  sil_values <- map_dbl(2:max_k, function(k) {
+    pam_fit <- pam(gower_dist, k)
+    pam_fit$silinfo$avg.width
+  })
+  optimal_k <- which.max(sil_values) + 1
+  return(optimal_k)
+}
+
+# Calculate optimal clusters per vessel type
+optimal_clusters <- ceramics_filtered %>%
+  group_by(type_category) %>%
+  summarise(
+    n_datapoints = n(),
+    optimal_k = find_optimal_clusters_mixed(cur_data())
+  ) %>%
+  ungroup()
+
+# 🔹 Assign clusters and list vessels, rim types, and base types
+clustered_data <- ceramics_filtered %>%
+  group_by(type_category) %>%
+  group_modify(~{
+    mixed_data <- .x %>% select(litres, rim_collapsed, att_category, base_category)
+    gower_dist <- daisy(mixed_data, metric = "gower")
+    
+    optimal_k <- find_optimal_clusters_mixed(.x)
+    if (is.na(optimal_k) || optimal_k < 2) {
+      .x$cluster <- 1
+    } else {
+      pam_fit <- pam(gower_dist, optimal_k)
+      .x$cluster <- pam_fit$clustering
+    }
+    .x
+  }) %>%
+  ungroup()
+
+# 🔸 Print summary table of clusters by site and vessel
+cluster_summary <- clustered_data %>%
+  group_by(site_name, type_category, cluster) %>%
+  summarise(
+    vessel_numbers = paste(unique(vessel_number), collapse = ", "),
+    rim_types = paste(unique(rim_collapsed), collapse = ", "),
+    base_types = paste(unique(base_category), collapse = ", "),
+    att_types = paste(unique(att_category), collapse = ", "),
+    .groups = "drop"
+  )
+
+# Show the table in console
+print(cluster_summary, n = Inf)
+
+# 🔹 Plot: Optimal number of clusters per vessel type
+ggplot(optimal_clusters, aes(x = factor(type_category), y = optimal_k)) +
+  geom_col(fill = "steelblue") +
+  geom_text(aes(label = paste0("k=", optimal_k, "\n(n=", n_datapoints, ")")),
+            vjust = -0.6, fontface = "plain", size = 3) +
+  labs(
+    title = "Optimal Number of Clusters per Vessel Type (litres, coll. rim, base, attributes)",
+    x = "Vessel Type",
+    y = "Optimal Cluster Count"
+  ) +
+  expand_limits(y = max(optimal_clusters$optimal_k, na.rm = TRUE) + 2) +
+  theme_minimal(base_size = 8) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+```
 
 number of data points Comment:
 
@@ -3727,7 +3731,9 @@ VERY RISKY / Discarded (<10)
 - Type 11
 - Type 13
 
+-------------------------------------------------------------
 # The following cluster analysis is based on method 1.1 above
+-------------------------------------------------------------
 
 #Type 1
 
