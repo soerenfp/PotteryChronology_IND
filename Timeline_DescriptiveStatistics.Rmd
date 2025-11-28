@@ -3499,6 +3499,8 @@ OBS: When there is no data on the base of the vessel then they are treated as ha
 
 OBS: This is the one used for the appendix
 
+OBS: When there is no data on the base of the vessel then they are treated as having a round base (Bro)
+
 ```{r, echo=TRUE}
 
 # --- Load Libraries ---
@@ -3593,6 +3595,7 @@ ggplot(optimal_clusters, aes(x = factor(type_category), y = optimal_k)) +
   )
 
 ```
+
 
 ----------------------------------------------------------------------------------------
 # 1.3 Cluster analysis per vessel type including litres, collapsed rim, base, attributes
@@ -3692,6 +3695,119 @@ ggplot(optimal_clusters, aes(x = factor(type_category), y = optimal_k)) +
     plot.title = element_text(face = "bold"),
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
+
+```
+
+
+----------------------------------------------------------------------------------------
+# 1.4 Cluster analysis per vessel type including size, collapsed rim, base, attributes
+----------------------------------------------------------------------------------------
+
+```{r, echo=TRUE}
+
+# --- Load Libraries ---
+library(dplyr)
+library(cluster)
+library(ggplot2)
+library(purrr)
+library(tidyr)
+
+# Prepare cleaned categorical data
+ceramics_filtered <- ceramics_data %>%
+  mutate(
+    size_category = as.factor(size_category),
+    rim_collapsed = as.factor(rim_collapsed),
+    att_category = as.factor(att_category),
+    base_category = if_else(is.na(base_category) | base_category == "", "Bro", base_category),
+    base_category = as.factor(base_category)
+  ) %>%
+  filter(!is.na(size_category))
+
+
+# Function to find optimal clusters using all-categorical data
+find_optimal_clusters_mixed <- function(df) {
+  if (nrow(df) < 3) return(NA)   # cannot cluster
+  
+  mixed_data <- df %>% select(size_category, rim_collapsed, att_category, base_category)
+  gower_dist <- daisy(mixed_data, metric = "gower")
+  
+  max_k <- min(10, nrow(df) - 1)
+  
+  sil_values <- map_dbl(2:max_k, function(k) {
+    pam_fit <- pam(gower_dist, k, diss = TRUE)
+    pam_fit$silinfo$avg.width
+  })
+  
+  optimal_k <- which.max(sil_values) + 1
+  return(optimal_k)
+}
+
+
+# Assign clusters for each vessel type
+clustered_data <- ceramics_filtered %>%
+  group_by(type_category) %>%
+  group_modify(~{
+    if (nrow(.x) < 3) {
+      .x$cluster <- 1
+      return(.x)
+    }
+    
+    mixed_data <- .x %>% select(size_category, rim_collapsed, att_category, base_category)
+    gower_dist <- daisy(mixed_data, metric = "gower")
+    
+    optimal_k <- find_optimal_clusters_mixed(.x)
+    
+    if (is.na(optimal_k) || optimal_k < 2) {
+      .x$cluster <- 1
+    } else {
+      pam_fit <- pam(gower_dist, optimal_k, diss = TRUE)
+      .x$cluster <- pam_fit$clustering
+    }
+    
+    .x
+  }) %>%
+  ungroup()
+
+
+# Summary table
+cluster_summary <- clustered_data %>%
+  group_by(site_name, type_category, cluster) %>%
+  summarise(
+    vessel_numbers = paste(unique(vessel_number), collapse = ", "),
+    rim_types = paste(unique(rim_collapsed), collapse = ", "),
+    base_types = paste(unique(base_category), collapse = ", "),
+    att_types = paste(unique(att_category), collapse = ", "),
+    size_types = paste(unique(size_category), collapse = ", "),
+    .groups = "drop"
+  )
+
+print(cluster_summary, n = Inf)
+
+
+# Plot optimal k per vessel type
+optimal_clusters <- ceramics_filtered %>%
+  group_by(type_category) %>%
+  summarise(
+    n_datapoints = n(),
+    optimal_k = find_optimal_clusters_mixed(cur_data())
+  ) %>%
+  ungroup()
+
+ggplot(optimal_clusters, aes(x = factor(type_category), y = optimal_k)) +
+  geom_col(fill = "steelblue") +
+  geom_text(aes(label = paste0("k=", optimal_k, "\n(n=", n_datapoints, ")")),
+            vjust = -0.6, size = 3) +
+  labs(
+    title = "Optimal Clusters per Vessel Type (all categorical variables)",
+    x = "Vessel Type",
+    y = "Optimal Cluster Count"
+  ) +
+  theme_minimal(base_size = 8) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
 
 ```
 
