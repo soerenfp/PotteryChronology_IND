@@ -545,7 +545,7 @@ Let's try to make the plot a little nicer
 #library(cowplot)
 
 # Create a data frame to count the number of data points for each size category
-size_counts <- data.frame(table(ceramics_subset$size_category))
+size_counts <- data.frame(table(ceramics_data$size_category))
 colnames(size_counts) <- c("size_category", "Count")
 
 # Calculate total number of size data points
@@ -571,7 +571,7 @@ bar_plot_size <- ggplot(size_counts, aes(x = as.factor(size_category), y = Count
 legend_table_size <- data.frame(
   Size_Type = 1:5,
   Abbreviation = c("a", "b", "c", "d", "e"),
-  Description = c("<14.9 cm", "15-24.9 cm", "25-34.9 cm", "35-44.9 cm", ">45 cm")
+  Description = c("0-1 l", "1-6 l", "6-35 l", "35-50 l", ">50 l")
 )
 
 # Convert the legend table to a plot with adjusted margins and abbreviations
