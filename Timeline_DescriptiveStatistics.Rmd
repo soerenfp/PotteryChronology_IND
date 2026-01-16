@@ -7129,5 +7129,181 @@ ggplot(ceramics_subset, aes(x = actual_width, y = actual_height, color = cluster
 
 ```
 
+### Clean code base on method 1.5 above (TRIAL) ###
+
+```{r, echo=TRUE}
+library(dplyr)
+library(cluster)
+library(ggplot2)
+library(tidyr)
+library(forcats)
+
+# --- Step 1: Filter for one vessel type ---
+vessel_type_selected <- 1
+
+ceramics_subset <- ceramics_data %>%
+  filter(type_category == vessel_type_selected) %>%
+  mutate(
+    base_category = ifelse(is.na(base_category) | base_category == "", "Bro", base_category),
+    actual_width = na_if(actual_width, 0),
+    actual_diameter = na_if(actual_diameter, 0),
+    actual_height = na_if(actual_height, 0),
+    litres = na_if(litres, 0),
+    litres = round(litres, 2),
+    rim_collapsed = fct_drop(as.factor(rim_collapsed)),
+    att_category = fct_drop(as.factor(att_category)),
+    base_category = fct_drop(as.factor(base_category)),
+    size_category = fct_drop(as.factor(size_category))
+  ) %>%
+  filter(
+    !is.na(actual_width) |
+    !is.na(actual_diameter) |
+    !is.na(actual_height)
+  )
+
+cat("\nRows used for clustering:", nrow(ceramics_subset), "\n")
+
+# --- Step 2: Gower distance ---
+gower_vars <- c(
+  "actual_width",
+  "actual_diameter",
+  "actual_height",
+  "size_category",
+  "rim_collapsed",
+  "att_category",
+  "base_category"
+)
+
+gower_dist <- daisy(ceramics_subset[, gower_vars], metric = "gower")
+
+# --- Step 3: Optimal k ---
+max_k <- min(10, nrow(ceramics_subset) - 1)
+sil_widths <- rep(NA, max_k)
+
+for (k in 2:max_k) {
+  pam_fit <- pam(gower_dist, diss = TRUE, k = k)
+  sil_widths[k] <- pam_fit$silinfo$avg.width
+}
+
+optimal_k <- which.max(sil_widths)
+cat("Optimal number of clusters:", optimal_k, "\n")
+
+# --- Step 4: Final clustering ---
+final_pam <- pam(gower_dist, diss = TRUE, k = optimal_k)
+ceramics_subset$cluster <- as.factor(final_pam$clustering)
+
+# =========================================================
+# === DESCRIPTIVE STATISTICS (NUMERIC) ====================
+# =========================================================
+
+numeric_stats <- ceramics_subset %>%
+  group_by(cluster) %>%
+  summarise(
+    n = n(),
+
+    width_mean   = mean(actual_width, na.rm = TRUE),
+    width_median = median(actual_width, na.rm = TRUE),
+    width_min    = min(actual_width, na.rm = TRUE),
+    width_max    = max(actual_width, na.rm = TRUE),
+
+    diameter_mean   = mean(actual_diameter, na.rm = TRUE),
+    diameter_median = median(actual_diameter, na.rm = TRUE),
+
+    height_mean   = mean(actual_height, na.rm = TRUE),
+    height_median = median(actual_height, na.rm = TRUE),
+
+    litres_mean = mean(litres, na.rm = TRUE),
+    litres_median = median(litres, na.rm = TRUE),
+
+    .groups = "drop"
+  )
+
+cat("\n==============================\n")
+cat("DESCRIPTIVE STATISTICS (SIZE)\n")
+cat("==============================\n")
+print(as.data.frame(numeric_stats), row.names = FALSE)
+
+# =========================================================
+# === MOST COMMON CATEGORICAL VALUES ======================
+# =========================================================
+
+most_common <- function(x) {
+  tab <- sort(table(x), decreasing = TRUE)
+  paste0(names(tab)[1], " (n=", tab[1], ")")
+}
+
+categorical_profiles <- ceramics_subset %>%
+  group_by(cluster) %>%
+  summarise(
+    most_common_rim  = most_common(rim_collapsed),
+    most_common_base = most_common(base_category),
+    most_common_size = most_common(size_category),
+    most_common_att  = most_common(att_category),
+    .groups = "drop"
+  )
+
+cat("\n========================================\n")
+cat("MOST COMMON CATEGORICAL CHARACTERISTICS\n")
+cat("========================================\n")
+print(as.data.frame(categorical_profiles), row.names = FALSE)
+
+# =========================================================
+# === OPTIONAL: FULL FREQUENCY TABLES =====================
+# =========================================================
+
+cat("\n--- Rim frequencies by cluster ---\n")
+print(
+  ceramics_subset %>%
+    count(cluster, rim_collapsed) %>%
+    arrange(cluster, desc(n)),
+  n = Inf
+)
+
+cat("\n--- Base frequencies by cluster ---\n")
+print(
+  ceramics_subset %>%
+    count(cluster, base_category) %>%
+    arrange(cluster, desc(n)),
+  n = Inf
+)
+
+cat("\n--- Size category frequencies by cluster ---\n")
+print(
+  ceramics_subset %>%
+    count(cluster, size_category) %>%
+    arrange(cluster, desc(n)),
+  n = Inf
+)
+
+cat("\n--- Attribute frequencies by cluster ---\n")
+print(
+  ceramics_subset %>%
+    count(cluster, att_category) %>%
+    arrange(cluster, desc(n)),
+  n = Inf
+)
+
+# =========================================================
+# === PLOT ===============================================
+# =========================================================
+
+ggplot(ceramics_subset, aes(
+  x = actual_width,
+  y = actual_height,
+  color = cluster
+)) +
+  geom_point(size = 3, alpha = 0.9) +
+  labs(
+    title = paste("Cluster Analysis for Vessel Type", vessel_type_selected),
+    subtitle = paste("Optimal clusters (k) =", optimal_k),
+    x = "Actual Width (cm)",
+    y = "Actual Height (cm)",
+    color = "Cluster"
+  ) +
+  theme_minimal(base_size = 13)
+
+
+```
+
 
 
