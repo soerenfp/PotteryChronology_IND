@@ -676,7 +676,7 @@ cowplot::plot_grid(bar_plot_attribute, legend_plot_attribute, ncol = 2, rel_widt
 ```
 Looks perfect!
 
---------------------------------------------------------------------------------
+-------------------
 ## DATA PER SITE ##
 -------------------
 
@@ -804,6 +804,88 @@ Mema: 3 vessel types are represented, where the dominant is cat. 5
 OBS: I need to divide them into time phases, because right now I only see all the phases represented in one plot. I need to think about that.
 
 So, there is a difference of how many vessel types are represented at the sites, where Akumbu, Jenne-jeno, Koumbi Saleh, and T. Doupville/Galia all have 10 vessel types at the most. What is common from these sites? I think they are all hubs and "urbanized" but is there something else in common???
+
+# Trial of site and date
+
+```{r, echo=TRUE}
+library(ggplot2)
+library(dplyr)
+library(viridis)
+
+# Count occurrences of type_category per site AND date
+data_count_VS01 <- ceramics_data %>%
+  group_by(site_name, date, type_category) %>%
+  summarise(count = n(), .groups = 'drop')
+
+# Type descriptions
+type_descriptions_VS01 <- data.frame(
+  type_category = as.character(1:15),
+  type_description = c("1- Wide-open globular", "2- Open globular", "3- Closed hor. oval", "4- Vertical globular", "5- Closed globular", 
+                       "6- Tightly-closed globular", "7- Open carinated", "8- Wide-open carinated", "9- Vertical ver. oval", "10- Closed ver. oval", 
+                       "11- Tightly-closed ver. oval", "12- Lids (NOT plottet)", "13- Flasks", "14- Bottles", "15- Tellem tripods")
+)
+
+# Ensure matching types
+data_count_VS01$type_category <- as.character(data_count_VS01$type_category)
+type_descriptions_VS01$type_category <- as.character(type_descriptions_VS01$type_category)
+
+# Merge descriptions
+data_count_VS01 <- data_count_VS01 %>%
+  left_join(type_descriptions_VS01, by = "type_category")
+
+# Factor ordering
+data_count_VS01 <- data_count_VS01 %>%
+  mutate(
+    type_category = factor(type_category, levels = as.character(1:15)),
+    type_description = factor(type_description, levels = type_descriptions_VS01$type_description)
+  )
+
+###############################################################
+# 🔹 Plot function: one plot per site AND date
+###############################################################
+
+plot_site_date_VS01 <- function(site_name_input, date_input) {
+  
+  site_data <- data_count_VS01 %>%
+    filter(site_name == site_name_input, date == date_input)
+  
+  ggplot(site_data, aes(x = type_category, y = count)) +
+  geom_bar(
+    stat = "identity",
+    position = "dodge",
+    fill = "lightblue",
+    color = "black"
+  ) +
+  scale_x_discrete(drop = FALSE) +
+  scale_y_continuous(breaks = function(x) seq(0, ceiling(max(x)), by = 1)) +
+  theme_minimal() +
+  labs(
+    title = paste("Vessel Types at Site:", site_name_input, "| Date:", date_input),
+    x = "Type Category",
+    y = "Count"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+
+###############################################################
+# 🔹 Generate plots for ALL site × date combinations
+###############################################################
+
+site_date_combinations <- data_count_VS01 %>%
+  distinct(site_name, date)
+
+for (i in 1:nrow(site_date_combinations)) {
+  print(
+    plot_site_date_VS01(
+      site_date_combinations$site_name[i],
+      site_date_combinations$date[i]
+    )
+  )
+}
+```
+
+
+
 
 # STEP 02: Plot all the sites in three diagrams with the different vessel types represented
 
@@ -1017,7 +1099,7 @@ data_count_RS01 <- ceramics_subset %>%
   summarise(count = n(), .groups = 'drop')
 
 # Create a mapping of rim_category to descriptions (optional for additional info)
-rim_description_map <- data.frame(
+type_descriptions_VS01 <- data.frame(
   rim_category = c("Sr", "Sp", "Sf", "Sb", "Es", "Ec", "Ecc", "Ef", "Efl", "Ep", 
                    "Et", "Esg", "Emg", "Vs", "Vc", "Oth", "Otc", "Otf", "Ith", 
                    "Itc", "Itf", "Th", "Tc", "Tf", "Ca", "B", "Y"),
@@ -1079,6 +1161,8 @@ for (site in site_names_RS01) {
 So, this is perfect! I need to interpret it later. 
 
 OBS: You need to determine a specific colour to each rim type. Right now it changes in the plots. 
+
+
 
 # STEP 02: Plot all the sites in three diagrams with the different rim types represented
 
@@ -1489,7 +1573,7 @@ data_count_SS01 <- ceramics_subset %>%
 # Create a mapping of base_category to descriptions (optional for additional info)
 size_description_map <- data.frame(
   size_category = c("a", "b", "c", "d", "e"),
-  size_description = c("<14.9 cm", "15-24.9 cm", "25-34.9 cm", "35-44.9 cm", ">45 cm")
+  size_description = c("0-1 l", "1-6 l", "6-35 l", "35-50 l", ">50 l")
 )
 
 # Ensure `size_category` columns are character for merging
@@ -1535,6 +1619,76 @@ for (site in site_names_SS01) {
 Damn I'm good!
 
 OBS: I just noticed that the colors are not consistent, so the last category is always yellow for an example. I need to change this so the colors and types are consistent. This applies to all my previous plots!
+
+-----------------------------
+# plot of attributes per site
+-----------------------------
+
+In the following I will explore which attribute cateogries are dominant per site
+
+OBS I will use the AS abbreviations for Size - Site and then followed by a data number -> ex-SS01
+
+```{r, echo=TRUE}
+
+# Load required libraries
+# library(ggplot2)
+# library(dplyr)
+# library(viridis)
+
+# Count the occurrences of size_category per site, excluding NA values
+data_count_AS01 <- ceramics_subset %>%
+  filter(!is.na(att_category)) %>%  # Exclude rows with NA in size_category
+  group_by(site_name, att_category) %>%
+  summarise(count = n(), .groups = 'drop')
+
+# Create a mapping of base_category to descriptions (optional for additional info)
+att_description_map <- data.frame(
+  att_category = c("H", "Sp", "St", "K", "Pl"),
+  att_description = c("Handles", "Spouts", "Steamers", "Knobs", "Plastic band")
+)
+
+# Ensure `size_category` columns are character for merging
+data_count_AS01$att_category <- as.character(data_count_AS01$att_category)
+att_description_map$att_category <- as.character(att_description_map$att_category)
+
+# Merge the descriptions with the dataset
+data_count_AS01 <- data_count_AS01 %>%
+  left_join(att_description_map, by = "att_category")
+
+# Ensure the x-axis and legend are dynamically ordered based on present base types
+data_count_AS01 <- data_count_AS01 %>%
+  mutate(
+    att_category = factor(att_category, levels = unique(data_count_AS01$att_category)),
+    att_description = factor(att_description, levels = unique(data_count_AS01$att_description))
+  )
+
+# Create a function to generate a plot for a single site
+plot_site_AS01 <- function(site_name) {
+  site_data <- data_count_AS01 %>% filter(site_name == !!site_name)
+  
+  ggplot(site_data, aes(x = att_category, y = count, fill = att_description)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    scale_fill_viridis(discrete = TRUE, option = "D") +
+    theme_minimal() +
+    labs(
+      title = paste("Attribute Categories at Site:", site_name),
+      x = "Attribute Category",
+      y = "Count",
+      fill = "Attribute Type"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+
+# Get unique site names
+site_names_AS01 <- unique(data_count_AS01$site_name)
+
+# Generate and print plots for each site
+for (site in site_names_AS01) {
+  print(plot_site_AS01(site))
+}
+```
+
+OBS: Too few attributes to be interesting
 
 ---------------------------
 # Mean, median, range, SD #
