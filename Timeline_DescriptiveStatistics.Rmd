@@ -4121,75 +4121,75 @@ library(purrr)
 library(tidyr)
 
 # ---- 1. Numeric descriptive statistics ----
-#numeric_stats <- clustered_data %>%
-#  group_by(type_category, cluster) %>%
-#  summarise(
-#    n = n(),
+numeric_stats <- clustered_data %>%
+  group_by(type_category, cluster) %>%
+  summarise(
+    n = n(),
 #    mean_width = mean(actual_width, na.rm = TRUE),
 #    median_width = median(actual_width, na.rm = TRUE),
-#    min_width = min(actual_width, na.rm = TRUE),
-#    max_width = max(actual_width, na.rm = TRUE),
+    min_width = min(actual_width, na.rm = TRUE),
+    max_width = max(actual_width, na.rm = TRUE),
 #    sd_width = sd(actual_width, na.rm = TRUE),
 
 #    mean_diameter = mean(actual_diameter, na.rm = TRUE),
 #    median_diameter = median(actual_diameter, na.rm = TRUE),
-#    min_diameter = min(actual_diameter, na.rm = TRUE),
-#    max_diameter = max(actual_diameter, na.rm = TRUE),
+    min_diameter = min(actual_diameter, na.rm = TRUE),
+    max_diameter = max(actual_diameter, na.rm = TRUE),
 #    sd_diameter = sd(actual_diameter, na.rm = TRUE),
 
 #    mean_height = mean(actual_height, na.rm = TRUE),
 #    median_height = median(actual_height, na.rm = TRUE),
-#    min_height = min(actual_height, na.rm = TRUE),
-#    max_height = max(actual_height, na.rm = TRUE),
+    min_height = min(actual_height, na.rm = TRUE),
+    max_height = max(actual_height, na.rm = TRUE),
 #    sd_height = sd(actual_height, na.rm = TRUE),
     
 #    mean_litres = mean(litres, na.rm = TRUE),
-#    median_litres = median(litres, na.rm = TRUE),
+    median_litres = median(litres, na.rm = TRUE),
 #    min_litres = min(litres, na.rm = TRUE),
 #    max_litres = max(litres, na.rm = TRUE),
 #    sd_litres = sd(litres, na.rm = TRUE),
 
-#    .groups = "drop"
-#  )
+    .groups = "drop"
+  )
 
 # ---- 2. Most common categorical values ----
-#most_common <- function(x) {
-#  tab <- sort(table(x), decreasing = TRUE)
-#  paste0(names(tab)[1], " (n=", tab[1], ")")
-#}
+most_common <- function(x) {
+  tab <- sort(table(x), decreasing = TRUE)
+  paste0(names(tab)[1], " (n=", tab[1], ")")
+}
 
-#categorical_summary <- clustered_data %>%
-#  group_by(type_category, cluster) %>%
-#  summarise(
-#    most_common_rim  = most_common(rim_collapsed),
-#    most_common_base = most_common(base_category),
-#    most_common_size = most_common(size_category),
-#    most_common_att  = most_common(att_category),
-#    .groups = "drop"
-#  )
+categorical_summary <- clustered_data %>%
+  group_by(type_category, cluster) %>%
+  summarise(
+    most_common_rim  = most_common(rim_collapsed),
+    most_common_base = most_common(base_category),
+    most_common_size = most_common(size_category),
+    most_common_att  = most_common(att_category),
+    .groups = "drop"
+  )
 
 # ---- 3. Full frequency tables (long format) ----
-#frequency_tables <- clustered_data %>%
-#  pivot_longer(
-#    cols = c(rim_collapsed, base_category, size_category, att_category),
-#    names_to = "variable",
-#    values_to = "category"
-#  ) %>%
-#  group_by(type_category, cluster, variable, category) %>%
-#  summarise(count = n(), .groups = "drop") %>%
-#  arrange(type_category, cluster, variable, desc(count))
+frequency_tables <- clustered_data %>%
+  pivot_longer(
+    cols = c(rim_collapsed, base_category, size_category, att_category),
+    names_to = "variable",
+    values_to = "category"
+  ) %>%
+  group_by(type_category, cluster, variable, category) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  arrange(type_category, cluster, variable, desc(count))
 
 # ---- Export to Excel ----
-#write.xlsx(
-#  list(
-#    "Numeric_Statistics" = numeric_stats,
-#    "Categorical_Summary" = categorical_summary,
-#    "Frequencies" = frequency_tables
-#  ),
-#  file = "cluster_descriptive_statistics.xlsx"
-#)
+write.xlsx(
+  list(
+    "Numeric_Statistics" = numeric_stats,
+    "Categorical_Summary" = categorical_summary,
+    "Frequencies" = frequency_tables
+  ),
+  file = "cluster_descriptive_statistics.xlsx"
+)
 
-#cat("\n✅ Excel file exported: cluster_descriptive_statistics.xlsx\n")
+cat("\n✅ Excel file exported: cluster_descriptive_statistics.xlsx\n")
 
 ```
 
