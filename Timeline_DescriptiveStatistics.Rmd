@@ -571,7 +571,7 @@ bar_plot_size <- ggplot(size_counts, aes(x = as.factor(size_category), y = Count
 legend_table_size <- data.frame(
   Size_Type = 1:5,
   Abbreviation = c("a", "b", "c", "d", "e"),
-  Description = c("0-1 l", "1-6 l", "6-35 l", "35-50 l", ">50 l")
+  Description = c("0-1 l", "1-6 l", "6-35 l", "35-100 l", ">100 l")
 )
 
 # Convert the legend table to a plot with adjusted margins and abbreviations
@@ -805,7 +805,9 @@ OBS: I need to divide them into time phases, because right now I only see all th
 
 So, there is a difference of how many vessel types are represented at the sites, where Akumbu, Jenne-jeno, Koumbi Saleh, and T. Doupville/Galia all have 10 vessel types at the most. What is common from these sites? I think they are all hubs and "urbanized" but is there something else in common???
 
-# Trial of site and date
+-----------------------------
+# Site, date and vessel types
+-----------------------------
 
 ```{r, echo=TRUE}
 library(ggplot2)
@@ -884,7 +886,267 @@ for (i in 1:nrow(site_date_combinations)) {
 }
 ```
 
+------------------------------
+# Site, date and vessel volume
+------------------------------
 
+```{r, echo=TRUE}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# =========================================================
+# STEP 1: COUNT DATA (STRICT HIERARCHY)
+# =========================================================
+
+data_count_SS02 <- ceramics_data %>%
+  group_by(site_name, date, size_category) %>%
+  summarise(count = n(), .groups = 'drop')
+
+# =========================================================
+# STEP 2: COMPLETE WITHIN SITE × DATE (NOT GLOBAL)
+# =========================================================
+
+data_count_SS02 <- data_count_SS02 %>%
+  group_by(site_name, date) %>%   # 🔥 KEY FIX
+  complete(size_category = c("a", "b", "c", "d", "e"), fill = list(count = 0)) %>%
+  ungroup()
+
+# =========================================================
+# STEP 3: ORDERING
+# =========================================================
+
+data_count_SS02 <- data_count_SS02 %>%
+  mutate(
+    size_category = factor(size_category, levels = c("a", "b", "c", "d", "e"))
+  )
+
+# =========================================================
+# STEP 4: PLOT FUNCTION
+# =========================================================
+
+plot_site_date_SS02 <- function(site_name_input, date_input) {
+  
+  site_data <- data_count_SS02 %>%
+    filter(site_name == site_name_input, date == date_input)
+  
+  ggplot(site_data, aes(x = size_category, y = count)) +
+    geom_bar(
+      stat = "identity",
+      fill = "lightblue",
+      color = "black"
+    ) +
+    scale_x_discrete(drop = FALSE) +
+    scale_y_continuous(
+      breaks = function(x) seq(0, ceiling(max(x)), by = 1)
+    ) +
+    theme_minimal() +
+    labs(
+      title = paste("Size Distribution | Site:", site_name_input, "| Phase:", date_input),
+      x = "Size Category",
+      y = "Count"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+
+# =========================================================
+# STEP 5: GENERATE PLOTS
+# =========================================================
+
+site_date_combinations_SS02 <- data_count_SS02 %>%
+  distinct(site_name, date)
+
+for (i in seq_len(nrow(site_date_combinations_SS02))) {
+  print(
+    plot_site_date_SS02(
+      site_date_combinations_SS02$site_name[i],
+      site_date_combinations_SS02$date[i]
+    )
+  )
+}
+```
+
+--------------------------
+# Site, date and rim count
+--------------------------
+
+```{r, echo=TRUE}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# =========================================================
+# STEP 1: COUNT DATA (site × date × rim_category)
+# =========================================================
+
+data_count_RS02 <- ceramics_data %>%
+  group_by(site_name, date, rim_category) %>%
+  summarise(count = n(), .groups = 'drop')
+
+# =========================================================
+# STEP 2: COMPLETE WITHIN SITE × DATE (CRITICAL)
+# =========================================================
+
+rim_levels <- c(
+  "Sr", "Sp", "Sf", "Sb", "Es", "Ec", "Ecc", "Ef", "Efl", "Ep",
+  "Et", "Esg", "Emg", "Vs", "Vc", "Oth", "Otc", "Otf", "Ith",
+  "Itc", "Itf", "Th", "Tc", "Tf", "Ca", "B", "Y"
+)
+
+data_count_RS02 <- data_count_RS02 %>%
+  group_by(site_name, date) %>%
+  complete(rim_category = rim_levels, fill = list(count = 0)) %>%
+  ungroup()
+
+# =========================================================
+# STEP 3: ORDERING
+# =========================================================
+
+data_count_RS02 <- data_count_RS02 %>%
+  mutate(
+    rim_category = factor(rim_category, levels = rim_levels)
+  )
+
+# =========================================================
+# STEP 4: PLOT FUNCTION
+# =========================================================
+
+plot_site_phase_RS02 <- function(site_name_input, date_input) {
+  
+  site_data <- data_count_RS02 %>%
+    filter(site_name == site_name_input, date == date_input)
+  
+  ggplot(site_data, aes(x = rim_category, y = count)) +
+    geom_bar(
+      stat = "identity",
+      fill = "lightblue",
+      color = "black"
+    ) +
+    scale_x_discrete(drop = FALSE) +
+    scale_y_continuous(
+      breaks = function(x) seq(0, ceiling(max(x)), by = 1)
+    ) +
+    theme_minimal() +
+    labs(
+      title = paste("Rim Counts | Site:", site_name_input, "| Phase:", date_input),
+      x = "Rim Category",
+      y = "Count"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+
+# =========================================================
+# STEP 5: GENERATE ALL PLOTS
+# =========================================================
+
+site_phase_combinations_RS02 <- data_count_RS02 %>%
+  distinct(site_name, date)
+
+for (i in seq_len(nrow(site_phase_combinations_RS02))) {
+  print(
+    plot_site_phase_RS02(
+      site_phase_combinations_RS02$site_name[i],
+      site_phase_combinations_RS02$date[i]
+    )
+  )
+}
+```
+
+-----------------------------
+# Site, date and vessel bases
+-----------------------------
+
+```{r, echo=TRUE}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# =========================================================
+# STEP 0: CLEAN DATA FIRST (IMPORTANT FIX)
+# =========================================================
+
+ceramics_clean <- ceramics_data %>%
+  mutate(
+    base_category = trimws(base_category)
+  ) %>%
+  filter(
+    !is.na(base_category),
+    base_category != "",
+    base_category != "special"
+  )
+
+# =========================================================
+# STEP 1: COUNT (site × date × base_category)
+# =========================================================
+
+data_count_BS02 <- ceramics_clean %>%
+  group_by(site_name, date, base_category) %>%
+  summarise(count = n(), .groups = "drop")
+
+# =========================================================
+# STEP 2: COMPLETE WITHIN SITE × DATE
+# =========================================================
+
+base_levels <- sort(unique(data_count_BS02$base_category))
+
+data_count_BS02 <- data_count_BS02 %>%
+  group_by(site_name, date) %>%
+  complete(base_category = base_levels, fill = list(count = 0)) %>%
+  ungroup()
+
+# =========================================================
+# STEP 3: ORDERING
+# =========================================================
+
+data_count_BS02 <- data_count_BS02 %>%
+  mutate(
+    base_category = factor(base_category, levels = base_levels)
+  )
+
+# =========================================================
+# STEP 4: PLOT FUNCTION
+# =========================================================
+
+plot_site_phase_BS02 <- function(site_name_input, date_input) {
+  
+  site_data <- data_count_BS02 %>%
+    filter(site_name == site_name_input, date == date_input)
+  
+  ggplot(site_data, aes(x = base_category, y = count)) +
+    geom_bar(
+      stat = "identity",
+      fill = "lightblue",
+      color = "black"
+    ) +
+    scale_x_discrete(drop = FALSE) +
+    scale_y_continuous(
+      breaks = function(x) seq(0, ceiling(max(x)), by = 1)
+    ) +
+    theme_minimal() +
+    labs(
+      title = paste("Base Counts | Site:", site_name_input, "| Phase:", date_input),
+      x = "Base Category",
+      y = "Count"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+
+# =========================================================
+# STEP 5: LOOP THROUGH ALL SITE × PHASE
+# =========================================================
+
+site_phase_combinations_BS02 <- data_count_BS02 %>%
+  distinct(site_name, date)
+
+for (i in seq_len(nrow(site_phase_combinations_BS02))) {
+  print(
+    plot_site_phase_BS02(
+      site_phase_combinations_BS02$site_name[i],
+      site_phase_combinations_BS02$date[i]
+    )
+  )
+}
+```
 
 
 # STEP 02: Plot all the sites in three diagrams with the different vessel types represented
@@ -4180,19 +4442,18 @@ frequency_tables <- clustered_data %>%
   arrange(type_category, cluster, variable, desc(count))
 
 # ---- Export to Excel ----
-write.xlsx(
-  list(
-    "Numeric_Statistics" = numeric_stats,
-    "Categorical_Summary" = categorical_summary,
-    "Frequencies" = frequency_tables
-  ),
-  file = "cluster_descriptive_statistics.xlsx"
-)
+#write.xlsx(
+#  list(
+#    "Numeric_Statistics" = numeric_stats,
+#    "Categorical_Summary" = categorical_summary,
+#    "Frequencies" = frequency_tables
+#  ),
+#  file = "cluster_descriptive_statistics.xlsx"
+#)
 
-cat("\n✅ Excel file exported: cluster_descriptive_statistics.xlsx\n")
+#cat("\n✅ Excel file exported: cluster_descriptive_statistics.xlsx\n")
 
 ```
-
 
 
 -------------------------------------------------------------
