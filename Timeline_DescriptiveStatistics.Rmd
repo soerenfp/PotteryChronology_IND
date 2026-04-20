@@ -1056,6 +1056,8 @@ for (i in seq_len(nrow(site_phase_combinations_RS02))) {
 # Site, date and vessel bases
 -----------------------------
 
+This analysis only included the actual base count, so no rounded bases were added artificially. 
+
 ```{r, echo=TRUE}
 library(ggplot2)
 library(dplyr)
