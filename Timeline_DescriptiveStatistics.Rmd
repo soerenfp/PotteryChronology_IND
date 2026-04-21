@@ -1954,6 +1954,134 @@ for (site in site_names_AS01) {
 
 OBS: Too few attributes to be interesting
 
+
+# Count of rim, size, base, and attributes per vessel type
+
+
+```{r, echo=TRUE}
+library(dplyr)
+library(tidyr)
+
+# =========================================================
+# STEP 1: GENERIC COUNT FUNCTION
+# =========================================================
+
+make_counts <- function(data, var_name, label) {
+  data %>%
+    mutate(
+      category = as.character(.data[[var_name]])
+    ) %>%
+    filter(!is.na(category), category != "", category != "special") %>%
+    group_by(type_category, category) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    mutate(attribute = label)
+}
+
+# =========================================================
+# STEP 2: BUILD TABLES
+# =========================================================
+
+rim_df  <- make_counts(ceramics_data, "rim_collapsed", "Rim")
+base_df <- make_counts(ceramics_data, "base_category", "Base")
+att_df  <- make_counts(ceramics_data, "att_category", "Attribute")
+size_df <- make_counts(ceramics_data, "size_category", "Size")
+
+# =========================================================
+# STEP 3: COMBINE EVERYTHING
+# =========================================================
+
+combined_summary <- bind_rows(rim_df, base_df, att_df, size_df)
+
+# =========================================================
+# STEP 4: COMPLETE (ensures consistent structure per type)
+# =========================================================
+
+combined_summary <- combined_summary %>%
+  group_by(type_category, attribute) %>%
+  complete(category, fill = list(count = 0)) %>%
+  ungroup()
+
+# =========================================================
+# STEP 5: PRINT TABLE
+# =========================================================
+
+#print(combined_summary, n = Inf)
+
+
+```
+
+# Visualisation
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# =========================================================
+# STEP 1: BUILD LONG FORMAT DATA
+# =========================================================
+
+rim_df <- ceramics_data %>%
+  filter(!is.na(rim_collapsed), rim_collapsed != "", rim_collapsed != "special") %>%
+  group_by(type_category, category = rim_collapsed) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  mutate(attribute = "Rim")
+
+base_df <- ceramics_data %>%
+  filter(!is.na(base_category), base_category != "", base_category != "special") %>%
+  group_by(type_category, category = base_category) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  mutate(attribute = "Base")
+
+att_df <- ceramics_data %>%
+  filter(!is.na(att_category), att_category != "", att_category != "special") %>%
+  group_by(type_category, category = att_category) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  mutate(attribute = "Attribute")
+
+size_df <- ceramics_data %>%
+  filter(!is.na(size_category)) %>%
+  group_by(type_category, category = size_category) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  mutate(attribute = "Size")
+
+all_data <- bind_rows(rim_df, base_df, att_df, size_df)
+
+# =========================================================
+# STEP 2: PLOT FUNCTION (ONE TYPE = ONE FIGURE)
+# =========================================================
+
+plot_type_profile <- function(type_id) {
+  
+  df <- all_data %>%
+    filter(type_category == type_id)
+  
+  ggplot(df, aes(x = category, y = count)) +
+    geom_col(fill = "lightblue", color = "black") +
+    facet_wrap(~ attribute, scales = "free_x") +
+    theme_minimal() +
+    labs(
+      title = paste("Vessel Type", type_id, "— Morphological Profile"),
+      x = NULL,
+      y = "Count"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+
+# =========================================================
+# STEP 3: GENERATE ALL PLOTS
+# =========================================================
+
+type_list <- sort(unique(ceramics_data$type_category))
+
+for (t in type_list) {
+  print(plot_type_profile(t))
+}
+```
+
+
+
 ---------------------------
 # Mean, median, range, SD #
 ---------------------------
