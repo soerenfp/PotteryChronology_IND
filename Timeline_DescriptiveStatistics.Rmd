@@ -4511,6 +4511,7 @@ library(cluster)
 library(ggplot2)
 library(purrr)
 library(tidyr)
+library(openxlsx)
 
 # ---- 1. Numeric descriptive statistics ----
 numeric_stats <- clustered_data %>%
@@ -4571,17 +4572,66 @@ frequency_tables <- clustered_data %>%
   summarise(count = n(), .groups = "drop") %>%
   arrange(type_category, cluster, variable, desc(count))
 
-# ---- Export to Excel ----
-#write.xlsx(
-#  list(
-#    "Numeric_Statistics" = numeric_stats,
-#    "Categorical_Summary" = categorical_summary,
-#    "Frequencies" = frequency_tables
-#  ),
-#  file = "cluster_descriptive_statistics.xlsx"
-#)
+# ---- 4. Vessel-level reference table (NEW) ----
+vessel_reference <- clustered_data %>%
+  select(
+    site_name,
+    vessel_number,
+    type_category,
+    cluster,
+    rim_collapsed,
+    base_category,
+    size_category,
+    att_category
+  ) %>%
+  arrange(type_category, cluster, site_name)
 
-#cat("\n✅ Excel file exported: cluster_descriptive_statistics.xlsx\n")
+# ---- 5. Cluster distribution by site ----
+cluster_by_site <- clustered_data %>%
+  group_by(type_category, cluster, site_name) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  arrange(type_category, cluster, desc(n))
+
+# ---- 6. Cluster distribution by phase (date) ----
+cluster_by_phase <- clustered_data %>%
+  group_by(type_category, cluster, date) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  arrange(type_category, cluster, date)
+
+# 7. Dominant cluster per site × phase
+
+dominant_cluster <- clustered_data %>%
+  group_by(site_name, date, cluster) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  group_by(site_name, date) %>%
+  slice_max(n, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  arrange(site_name, date)
+
+# 8. Cluster trajectory over time (per type)
+
+cluster_trajectory <- clustered_data %>%
+  group_by(type_category, date, cluster) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  arrange(type_category, date, cluster)
+
+# --------Export to excel-----------
+
+write.xlsx(
+  list(
+    "Numeric_Statistics"    = numeric_stats,
+    "Categorical_Summary"   = categorical_summary,
+    "Frequencies"           = frequency_tables,
+    "Vessel_Reference"      = vessel_reference,
+    "Cluster_by_Site"       = cluster_by_site,
+    "Cluster_by_Phase"      = cluster_by_phase,
+    "Dominant_Cluster"      = dominant_cluster,     # NEW
+    "Cluster_Trajectory"    = cluster_trajectory    # NEW
+  ),
+  file = "cluster_descriptive_statistics.xlsx"
+)
+
+cat("\n✅ Excel file exported with full analytical framework\n")
 
 ```
 
