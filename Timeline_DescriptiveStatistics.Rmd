@@ -2080,6 +2080,187 @@ for (t in type_list) {
 }
 ```
 
+# rim, base and attribute dependent on type and size
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(ggplot2)
+
+# =========================================================
+# STEP 1: CLEAN DATA
+# =========================================================
+
+clean_data <- ceramics_data %>%
+  mutate(
+    type_category = as.character(type_category),
+    size_category = as.character(size_category),
+
+    rim_collapsed = na_if(as.character(rim_collapsed), ""),
+    base_category = na_if(as.character(base_category), ""),
+    att_category  = na_if(as.character(att_category), "")
+  ) %>%
+  filter(!is.na(type_category), !is.na(size_category))
+
+# =========================================================
+# STEP 2: PLOT FUNCTION (STRICT SEPARATION)
+# =========================================================
+
+plot_type_size <- function(type_input, size_input) {
+  
+  df <- clean_data %>%
+    filter(type_category == type_input,
+           size_category == size_input)
+  
+  # --- RIM (NOW rim_collapsed) ---
+  rim_df <- df %>%
+    filter(!is.na(rim_collapsed)) %>%
+    group_by(category = rim_collapsed) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    mutate(variable = "Rim (collapsed)")
+  
+  # --- BASE ---
+  base_df <- df %>%
+    filter(!is.na(base_category)) %>%
+    group_by(category = base_category) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    mutate(variable = "Base")
+  
+  # --- ATTRIBUTE ---
+  att_df <- df %>%
+    filter(!is.na(att_category)) %>%
+    group_by(category = att_category) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    mutate(variable = "Attribute")
+  
+  plot_df <- bind_rows(rim_df, base_df, att_df)
+  
+  if (nrow(plot_df) == 0) {
+    message("Skipping Type ", type_input, " Size ", size_input, " (no data)")
+    return(NULL)
+  }
+  
+  ggplot(plot_df, aes(x = category, y = count)) +
+    geom_col(fill = "lightblue", color = "black") +
+    facet_wrap(~ variable, scales = "free_x") +
+    theme_minimal() +
+    labs(
+      title = paste("Type", type_input, "| Size", size_input),
+      x = NULL,
+      y = "Count"
+    ) +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1)
+    )
+}
+
+# =========================================================
+# STEP 3: LOOP
+# =========================================================
+
+combos <- clean_data %>%
+  distinct(type_category, size_category)
+
+for (i in seq_len(nrow(combos))) {
+  
+  p <- plot_type_size(
+    combos$type_category[i],
+    combos$size_category[i]
+  )
+  
+  if (!is.null(p)) print(p)
+}
+```
+
+
+
+
+-------------------
+# Sites and types #
+-------------------
+
+This section will understand which sites have which types, bases, sizes, rims, and attributes
+
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# =========================================================
+# STEP 1: PREP DATA (fix types + reshape)
+# =========================================================
+
+plot_data <- ceramics_data %>%
+  mutate(
+    type_category = as.character(type_category),
+    size_category = as.character(size_category),
+    rim_category  = as.character(rim_category),
+    base_category = as.character(base_category),
+    att_category  = as.character(att_category)   # 👈 NEW
+  ) %>%
+  pivot_longer(
+    cols = c(type_category, size_category, rim_category, base_category, att_category),
+    names_to = "variable",
+    values_to = "category"
+  ) %>%
+  filter(!is.na(category), category != "", category != "special") %>%
+  group_by(site_name, date, variable, category) %>%
+  summarise(count = n(), .groups = "drop")
+
+# nicer labels
+plot_data <- plot_data %>%
+  mutate(
+    variable = recode(variable,
+      type_category = "Type",
+      size_category = "Size",
+      rim_category  = "Rim",
+      base_category = "Base",
+      att_category  = "Attribute"   # 👈 NEW
+    )
+  )
+
+# =========================================================
+# STEP 2: PLOT FUNCTION
+# =========================================================
+
+plot_site_date <- function(site_input, date_input) {
+  
+  df <- plot_data %>%
+    filter(site_name == site_input, date == date_input)
+  
+  ggplot(df, aes(x = category, y = count)) +
+    geom_col(fill = "lightblue", color = "black") +
+    facet_wrap(~ variable, scales = "free_x") +
+    scale_y_continuous(breaks = function(x) seq(0, ceiling(max(x)), 1)) +
+    theme_minimal() +
+    labs(
+      title = paste("Site:", site_input, "| Date:", date_input),
+      x = NULL,
+      y = "Count"
+    ) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+}
+
+# =========================================================
+# STEP 3: LOOP THROUGH ALL SITE × DATE
+# =========================================================
+
+combinations <- plot_data %>%
+  distinct(site_name, date)
+
+for (i in seq_len(nrow(combinations))) {
+  print(
+    plot_site_date(
+      combinations$site_name[i],
+      combinations$date[i]
+    )
+  )
+}
+
+```
+
 
 
 ---------------------------
