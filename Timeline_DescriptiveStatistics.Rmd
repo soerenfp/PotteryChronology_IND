@@ -2263,6 +2263,10 @@ for (i in seq_len(nrow(combinations))) {
 
 
 
+------------------------------
+### DESCRIPTIVE STATISTICS ###
+------------------------------
+
 ---------------------------
 # Mean, median, range, SD #
 ---------------------------
@@ -2282,6 +2286,7 @@ Range: In mathematics, the term "range" has two primary meanings: in statistics,
 SD: A standard deviation is a statistical measure of the amount of variation or dispersion within a set of data values, indicating how much individual data points typically deviate from the mean (average) of the set. A low standard deviation signifies that the data points tend to be close to the mean, while a high standard deviation indicates that the data points are spread out over a wider range of values.  
 
 OBS: The difference between the mean and the median is that the mean is the most frequent number, and the median is where the middle of the dataset is based on the total count of data points.
+
 
 #descriptive statistics for all the vessel types
 
@@ -3146,6 +3151,168 @@ ggplot(SD_values_diameter, aes(x = factor(vessel_type), y = Value)) +
 
 Interpretation:
 
+-------------------------------------------------------------
+# Descritive statistics per type_category per size_category #
+-------------------------------------------------------------
+
+
+
+```{r, echo=TRUE}
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+# install.packages("openxlsx") if needed
+library(openxlsx)
+
+# =========================================================
+# STEP 1: CLEAN DATA
+# =========================================================
+
+clean_data <- ceramics_data %>%
+  mutate(
+    type_category = as.factor(type_category),
+    size_category = as.factor(size_category),
+
+    actual_width    = na_if(actual_width, 0),
+    actual_diameter = na_if(actual_diameter, 0),
+    actual_height   = na_if(actual_height, 0),
+    litres          = na_if(litres, 0)
+  ) %>%
+  filter(!is.na(type_category), !is.na(size_category))
+
+# =========================================================
+# STEP 2: LONG FORMAT
+# =========================================================
+
+long_data <- clean_data %>%
+  pivot_longer(
+    cols = c(actual_width, actual_diameter, actual_height, litres),
+    names_to = "variable",
+    values_to = "value"
+  ) %>%
+  filter(!is.na(value))
+
+# =========================================================
+# STEP 3: DESCRIPTIVE STATISTICS TABLE
+# =========================================================
+
+descriptive_table <- long_data %>%
+  group_by(type_category, size_category, variable) %>%
+  summarise(
+    n       = n(),
+    min     = min(value),
+    max     = max(value),
+    mean    = mean(value),
+    median  = median(value),
+    sd      = sd(value),
+    .groups = "drop"
+  ) %>%
+  arrange(type_category, size_category, variable)
+
+# 🔹 Print to console
+cat("\n=== DESCRIPTIVE STATISTICS TABLE ===\n")
+print(descriptive_table, n = Inf)
+
+# =========================================================
+# STEP 4: OPTIONAL — EXPORT TO EXCEL
+# =========================================================
+
+write.xlsx(
+  descriptive_table,
+  file = "descriptive_statistics_by_type_size.xlsx"
+)
+
+cat("\n✅ Excel file saved as: descriptive_statistics_by_type_size.xlsx\n")
+
+# =========================================================
+# STEP 5: PLOT FUNCTION (UNCHANGED)
+# =========================================================
+
+plot_type_stats <- function(type_input) {
+  
+  df <- long_data %>%
+    filter(type_category == type_input)
+  
+  if (nrow(df) == 0) return(NULL)
+  
+  ggplot(df, aes(x = size_category, y = value)) +
+    
+    geom_boxplot(fill = "lightblue", outlier.alpha = 0.3) +
+    
+    stat_summary(
+      fun = median,
+      geom = "point",
+      size = 2
+    ) +
+    
+    facet_wrap(~ variable, scales = "free_y") +
+    
+    theme_minimal(base_size = 12) +
+    
+    labs(
+      title = paste("Descriptive Statistics for Vessel Type", type_input),
+      x = "Size Category",
+      y = "Value"
+    )
+}
+
+# =========================================================
+# STEP 6: LOOP PLOTS
+# =========================================================
+
+types <- unique(long_data$type_category)
+
+for (t in types) {
+  p <- plot_type_stats(t)
+  if (!is.null(p)) print(p)
+}
+
+```
+
+# Export in excel
+
+```{r, echo=TRUE}
+library(openxlsx)
+library(dplyr)
+
+# --- ROUND VALUES ---
+descriptive_table <- descriptive_table %>%
+  mutate(
+    across(
+      c(min, max, mean, median, sd),
+      ~ round(.x, 1)
+    )
+  )
+
+# --- CREATE WORKBOOK ---
+wb <- createWorkbook()
+
+types <- unique(descriptive_table$type_category)
+
+for (t in types) {
+  
+  df <- descriptive_table %>%
+    filter(type_category == t)
+  
+  addWorksheet(wb, paste0("Type_", t))
+  writeData(wb, sheet = paste0("Type_", t), df)
+}
+
+# --- SAVE FILE ---
+#saveWorkbook(
+#  wb,
+#  file = "descriptive_statistics_by_type_size.xlsx",
+#  overwrite = TRUE
+#)
+
+#cat("\n✅ Excel file saved with values rounded to 1 decimal.\n")
+#getwd()
+```
+
+
+
+
 # coefficient of variation per type category
 
 ```{r, echo=TRUE}
@@ -3795,6 +3962,9 @@ Tails: The tails of the curve show the probability of observing extreme values. 
 
 Area under the curve: The total area under the curve is always equal to 1, representing 100% of the data. The area under a specific section of the curve can be used to estimate the percentage of data that falls within that range. 
 
+------------------------
+### CLUSTER ANALYSIS ###
+------------------------
 
 #Cluster Analysis: Vessel Types by 'width' and 'height' Categories
 
