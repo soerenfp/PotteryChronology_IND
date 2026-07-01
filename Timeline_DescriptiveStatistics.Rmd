@@ -222,13 +222,13 @@ bar_plot_vessel <- ggplot(vessel_counts, aes(x = as.factor(type_category), y = c
 
 # Legend table for vessel type descriptions
 legend_table_vessel <- data.frame(
-  type_category = 1:15,
+  type_category = 1:14,
   Description = c("Wide-open sphere", "Open sphere", "Closed hor. ellipsoid", 
                   "Vertical sphere", "Closed sphere", "Tightly-closed sphere", 
                   "Open carinated", "Wide-open carinated", 
                   "Vertical ver. ellipsoid", "Closed ver. ellipsoid", 
-                  "Tightly-closed ver. ellipsoid", "Lids", 
-                  "Flasks", "Tellem tripods", "Tellem tripods (top)")
+                  "Tightly-closed ver. ellipsoid", 
+                  "Flasks", "Tripods", "Tripods (top)")
 )
 
 # Convert the legend table to a plot with adjusted margins
@@ -2697,13 +2697,46 @@ descriptive_stats_type11
 
 Interpretation:
 
-#Type 13 (Flasks)
+#Type 12 (Flasks)
 
 I collapsed flasks and bottles
 
 ```{r, echo=TRUE}
 
-descriptive_stats_type13 <- ceramics_data %>%
+descriptive_stats_type12 <- ceramics_data %>%
+  filter(type_category == "12") %>%
+  summarise(
+    across(all_of(numeric_vars),
+           list(
+             mean = ~mean(.x, na.rm = TRUE),
+             median = ~median(.x, na.rm = TRUE),
+             min = ~min(.x, na.rm = TRUE),
+             max = ~max(.x, na.rm = TRUE),
+             sd = ~sd(.x, na.rm = TRUE)
+           ),
+           .names = "{.col}_{.fn}"
+    )
+  ) %>%
+  pivot_longer(
+    everything(),
+    names_to = c("Variable", "Statistic"),
+    values_to = "Value",
+    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
+  )
+
+# Optional: round values for clarity
+# descriptive_stats_type2 <- descriptive_stats_type2 %>% mutate(Value = round(Value, 2))
+
+descriptive_stats_type12
+```
+
+Interpretation: It looks like this because there are only very few registrations
+
+# Type 13 (Tellem tripods)
+
+```{r, echo=TRUE}
+
+descriptive_stats_type14 <- ceramics_data %>%
   filter(type_category == "13") %>%
   summarise(
     across(all_of(numeric_vars),
@@ -2730,71 +2763,6 @@ descriptive_stats_type13 <- ceramics_data %>%
 descriptive_stats_type13
 ```
 
-Interpretation: It looks like this because there are only very few registrations
-
-# Type 14 (Tellem tripods)
-
-```{r, echo=TRUE}
-
-descriptive_stats_type14 <- ceramics_data %>%
-  filter(type_category == "14") %>%
-  summarise(
-    across(all_of(numeric_vars),
-           list(
-             mean = ~mean(.x, na.rm = TRUE),
-             median = ~median(.x, na.rm = TRUE),
-             min = ~min(.x, na.rm = TRUE),
-             max = ~max(.x, na.rm = TRUE),
-             sd = ~sd(.x, na.rm = TRUE)
-           ),
-           .names = "{.col}_{.fn}"
-    )
-  ) %>%
-  pivot_longer(
-    everything(),
-    names_to = c("Variable", "Statistic"),
-    values_to = "Value",
-    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
-  )
-
-# Optional: round values for clarity
-# descriptive_stats_type2 <- descriptive_stats_type2 %>% mutate(Value = round(Value, 2))
-
-descriptive_stats_type14
-```
-
-Interpretation:
-
-# Type 15 (Tellem tripods (top))
-
-```{r, echo=TRUE}
-
-descriptive_stats_type15 <- ceramics_data %>%
-  filter(type_category == "15") %>%
-  summarise(
-    across(all_of(numeric_vars),
-           list(
-             mean = ~mean(.x, na.rm = TRUE),
-             median = ~median(.x, na.rm = TRUE),
-             min = ~min(.x, na.rm = TRUE),
-             max = ~max(.x, na.rm = TRUE),
-             sd = ~sd(.x, na.rm = TRUE)
-           ),
-           .names = "{.col}_{.fn}"
-    )
-  ) %>%
-  pivot_longer(
-    everything(),
-    names_to = c("Variable", "Statistic"),
-    values_to = "Value",
-    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
-  )
-
-# Optional: round values for clarity
-# descriptive_stats_type2 <- descriptive_stats_type2 %>% mutate(Value = round(Value, 2))
-
-descriptive_stats_type15
-```
 
 Interpretation: 
 
@@ -2821,9 +2789,8 @@ descriptive_stats_all <- bind_rows(
   descriptive_stats_type9 %>% mutate(vessel_type = 9),
   descriptive_stats_type10 %>% mutate(vessel_type = 10),
   descriptive_stats_type11 %>% mutate(vessel_type = 11),
+  descriptive_stats_type12 %>% mutate(vessel_type = 12),
   descriptive_stats_type13 %>% mutate(vessel_type = 13),
-  descriptive_stats_type14 %>% mutate(vessel_type = 14),
-  descriptive_stats_type15 %>% mutate(vessel_type = 15)
 )
 
 ```
@@ -3214,19 +3181,9 @@ descriptive_table <- long_data %>%
 cat("\n=== DESCRIPTIVE STATISTICS TABLE ===\n")
 print(descriptive_table, n = Inf)
 
-# =========================================================
-# STEP 4: OPTIONAL — EXPORT TO EXCEL
-# =========================================================
-
-write.xlsx(
-  descriptive_table,
-  file = "descriptive_statistics_by_type_size.xlsx"
-)
-
-cat("\n✅ Excel file saved as: descriptive_statistics_by_type_size.xlsx\n")
 
 # =========================================================
-# STEP 5: PLOT FUNCTION (UNCHANGED)
+# STEP 4: PLOT FUNCTION (UNCHANGED)
 # =========================================================
 
 plot_type_stats <- function(type_input) {
@@ -3258,7 +3215,7 @@ plot_type_stats <- function(type_input) {
 }
 
 # =========================================================
-# STEP 6: LOOP PLOTS
+# STEP 5: LOOP PLOTS
 # =========================================================
 
 types <- unique(long_data$type_category)
@@ -3268,6 +3225,16 @@ for (t in types) {
   if (!is.null(p)) print(p)
 }
 
+# =========================================================
+# STEP 6: OPTIONAL — EXPORT TO EXCEL
+# =========================================================
+
+#write.xlsx(
+#  descriptive_table,
+#  file = "descriptive_statistics_by_type_size.xlsx"
+#)
+
+#cat("\n✅ Excel file saved as: descriptive_statistics_by_type_size.xlsx\n")
 ```
 
 # Export in excel
