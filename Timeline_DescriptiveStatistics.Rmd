@@ -656,9 +656,9 @@ bar_plot_attribute <- ggplot(attribute_counts, aes(x = as.factor(attributes), y 
 
 # Legend table for vessel type descriptions
 legend_table_attribute <- data.frame(
-  Attribute_Type = 1:5,
-  Abbreviation = c("H", "Sp", "St", "K", "Pl"),
-  Description = c("Handles", "Spouts", "Steamers", "Knobs", "Plastic Band")
+  Attribute_Type = 1:4,
+  Abbreviation = c("H", "Sp", "K", "Pl"),
+  Description = c("Handles", "Spouts", "Knobs", "Plastic Band")
 )
 
 # Convert the legend table to a plot with adjusted margins and abbreviations
@@ -2703,31 +2703,31 @@ I collapsed flasks and bottles
 
 ```{r, echo=TRUE}
 
-descriptive_stats_type12 <- ceramics_data %>%
-  filter(type_category == "12") %>%
-  summarise(
-    across(all_of(numeric_vars),
-           list(
-             mean = ~mean(.x, na.rm = TRUE),
-             median = ~median(.x, na.rm = TRUE),
-             min = ~min(.x, na.rm = TRUE),
-             max = ~max(.x, na.rm = TRUE),
-             sd = ~sd(.x, na.rm = TRUE)
-           ),
-           .names = "{.col}_{.fn}"
-    )
-  ) %>%
-  pivot_longer(
-    everything(),
-    names_to = c("Variable", "Statistic"),
-    values_to = "Value",
-    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
-  )
+#descriptive_stats_type12 <- ceramics_data %>%
+#  filter(type_category == "12") %>%
+#  summarise(
+#    across(all_of(numeric_vars),
+#           list(
+#             mean = ~mean(.x, na.rm = TRUE),
+#             median = ~median(.x, na.rm = TRUE),
+#             min = ~min(.x, na.rm = TRUE),
+#             max = ~max(.x, na.rm = TRUE),
+#             sd = ~sd(.x, na.rm = TRUE)
+#           ),
+#           .names = "{.col}_{.fn}"
+#    )
+#  ) %>%
+#  pivot_longer(
+#    everything(),
+#    names_to = c("Variable", "Statistic"),
+#    values_to = "Value",
+#    names_sep = "_(?=[^_]+$)"  # Split at last underscore: Variable first, Statistic second
+#  )
 
 # Optional: round values for clarity
 # descriptive_stats_type2 <- descriptive_stats_type2 %>% mutate(Value = round(Value, 2))
 
-descriptive_stats_type12
+#descriptive_stats_type12
 ```
 
 Interpretation: It looks like this because there are only very few registrations
@@ -2736,7 +2736,7 @@ Interpretation: It looks like this because there are only very few registrations
 
 ```{r, echo=TRUE}
 
-descriptive_stats_type14 <- ceramics_data %>%
+descriptive_stats_type13 <- ceramics_data %>%
   filter(type_category == "13") %>%
   summarise(
     across(all_of(numeric_vars),
@@ -2789,7 +2789,7 @@ descriptive_stats_all <- bind_rows(
   descriptive_stats_type9 %>% mutate(vessel_type = 9),
   descriptive_stats_type10 %>% mutate(vessel_type = 10),
   descriptive_stats_type11 %>% mutate(vessel_type = 11),
-  descriptive_stats_type12 %>% mutate(vessel_type = 12),
+#  descriptive_stats_type12 %>% mutate(vessel_type = 12),
   descriptive_stats_type13 %>% mutate(vessel_type = 13),
 )
 
